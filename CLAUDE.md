@@ -25,3 +25,5 @@ This applies per topic: in a single conversation I may have already said to upda
 After updating files: summarize what changed at the end of your turn using a bullet list.
 During discussion: answer in chat. For each topic or question, name it explicitly and give enough context that the answer stands on its own.
 Always: visually separate distinct topics with headings, blank linesg, or bullet points — don't run multiple topics together in one paragraph.
+
+At the very end of every turn, add to your output an empty line followed by two horizontal rules.
