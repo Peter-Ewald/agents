@@ -19,9 +19,7 @@ as the scratchpad itself.
 
 ## Shell commands and git
 
-Propose the exact command in chat before running it. Only run after explicit confirmation.
-
-For wave commit messages, draft the full message in chat first. Pass it via `-m "…"` directly — no HEREDOC in the `git commit` invocation. Only run `git commit` after I say OK.
+Draft the full wave commit message in chat first. Pass it via `-m "…"` directly — no HEREDOC in the `git commit` invocation, and no `Co-Authored-By` trailer — and only run `git commit` after I say OK. (Both diverge from Claude Code's own default git behavior, which uses a HEREDOC and adds a trailer — everything else about routine shell commands already follows the default permission system, nothing extra to state here.)
 
 ## Chat vs. file updates
 
