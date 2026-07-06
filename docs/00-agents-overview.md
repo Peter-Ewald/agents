@@ -49,16 +49,15 @@ that phase's rule needs to hold:
 | Verification | A step (main agent runs tests directly), plus a hook for changelog ordering | Judgment (is this failure pre-existing or new?) can't be a hook, so it stays a step; the changelog-before-commit check is pure mechanics, so that part is a hook. |
 | Commit proposal | Normal chat proposal | No new mechanism needed — drafting a message and waiting for confirmation is already reliable as prose. |
 
-The `/wave` skill that actually drives an agent through these five phases end-to-end doesn't exist yet —
-see [`../implementation_plan.md`](../implementation_plan.md) for what's still pending. Until then, each
-mechanism above already works standalone (a hook fires regardless of whether `/wave` exists to orchestrate
-around it).
+The `wave` skill ([`02-skills-and-subagents.md`](02-skills-and-subagents.md)) is what actually drives an
+agent through these five phases end-to-end, but every mechanism above also works standalone — a hook fires
+whether or not `wave` is the thing that triggered the edit it's checking.
 
 ## Reading further
 
 - [`01-hooks.md`](01-hooks.md) — every hook, what event triggers it, what it checks, and how to test it
   standalone.
-- [`02-skills-and-subagents.md`](02-skills-and-subagents.md) — `doc-conventions`, `doc-sweep`,
+- [`02-skills-and-subagents.md`](02-skills-and-subagents.md) — `wave`, `doc-conventions`, `doc-sweep`,
   `sdk-release`.
 - [`03-cross-repo-distribution.md`](03-cross-repo-distribution.md) — how the symlink setup works, and the
   monorepo gotcha it ran into.

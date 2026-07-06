@@ -74,6 +74,18 @@ Blocks (exit 2) a `git commit` if a staged `pyproject.toml` shows a version bump
 `CHANGELOG.md` in the same package directory isn't also staged. Enforces changelog-before-release ordering
 mechanically instead of relying on remembering to write the changelog first.
 
+## `statusline.py` (not a lifecycle hook, but lives alongside these)
+
+[`../.claude/statusline.py`](../.claude/statusline.py), registered under `statusLine` rather than `hooks`
+in `~/.claude/settings.json`. Reads `/tmp/claude-wave-phase-<session_id>` (written by the `wave` skill —
+see [`02-skills-and-subagents.md`](02-skills-and-subagents.md)) and prints it, or prints nothing if no wave
+is in progress. Same JSON-on-stdin shape as a hook, which is why it's documented here, but it isn't
+triggered by a lifecycle event — Claude Code polls it for display.
+
+```sh
+echo '{"session_id": "s1"}' | ../.claude/statusline.py   # prints nothing, no wave in progress
+```
+
 ## Testing a hook change
 
 Every script reads one JSON object from stdin and either exits 0 (optionally printing a

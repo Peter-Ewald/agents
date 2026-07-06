@@ -1,7 +1,21 @@
 # Skills and subagents
 
-Three pieces so far, each chosen for a different reason — see [glossary.md](glossary.md) for what
+Four pieces so far, each chosen for a different reason — see [glossary.md](glossary.md) for what
 distinguishes a skill from a subagent from a fork.
+
+## `wave` (skill)
+
+[`../.claude/skills/wave/SKILL.md`](../.claude/skills/wave/SKILL.md)
+
+Drives a wave from `implementation_plan.md` through instructions.md's five phases end-to-end: plan,
+implement, documentation update, verification, commit proposal. Runs inline in the main agent rather than
+forking itself, since Plan and Implement need to actually happen in the calling conversation — only the
+Documentation update phase spins off a fork, for the reason `doc-conventions` below explains. At each
+phase transition it updates `TodoWrite` and overwrites `/tmp/claude-wave-phase-${CLAUDE_SESSION_ID}`, which
+the statusline script reads to show the current phase. That path — not the session's own scratchpad
+directory — is deliberate: the statusline runs as a separate process that only receives a session ID on
+its own stdin, not this session's scratchpad path, so the hand-off point has to be something derivable
+from the session ID alone.
 
 ## `doc-conventions` (skill)
 
@@ -38,9 +52,3 @@ flags (`uv publish --index ramtech-pypi dist/<package>-<version>*`) are exactly 
 easy to mistype once and shouldn't depend on being remembered correctly. After a successful release it
 also checks other repos in the workspace for stale version pins and reports them — it doesn't bump those
 repos automatically.
-
-## What's still missing
-
-The end-of-wave documentation update phase is supposed to use a **forked** agent (full conversation
-context) applying `doc-conventions`, rather than either of the two subagents above — that only exists once
-the `/wave` skill itself is built. See [`../implementation_plan.md`](../implementation_plan.md).

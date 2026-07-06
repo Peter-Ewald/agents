@@ -11,6 +11,12 @@ Code-specific mechanics that extend or override it.
 
 Use Claude Code's **TodoWrite tool** to mirror wave phases. Create one todo item per phase (Plan, Implement, Documentation update, Verification, Commit message proposal) and mark each one complete as it finishes — do not batch-update at the end.
 
+## Session plan location
+
+Write the session plan (see `instructions.md`, Implementation Waves) to a file in this session's
+scratchpad directory — this environment has no `/memories/` mount. Discarded when the session ends, same
+as the scratchpad itself.
+
 ## Shell commands and git
 
 Propose the exact command in chat before running it. Only run after explicit confirmation.

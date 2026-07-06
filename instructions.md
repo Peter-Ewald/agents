@@ -20,7 +20,7 @@ After any non-trivial edit to an existing `.md` file, re-read the whole file onc
 
 # Clarifying Questions (Both Directions)
 
-The same shape applies whether I am asking you for clarification, or you are asking me for guidance during planning, discussion, or while drafting `implementation_plan.md` or `/memories/session/plan.md`:
+The same shape applies whether I am asking you for clarification, or you are asking me for guidance during planning, discussion, or while drafting `implementation_plan.md` or the session plan:
 
 - Explain the broader context first: the goal, the design principles in play, what the choice influences.
 - Define any term that could create different mental models.
@@ -37,7 +37,7 @@ Non-trivial work is organised into **waves**. A wave is one coherent slice of ch
 
 Every wave runs through fixed phases in order:
 
-1. **Plan** — before any code change, write a detailed plan to `/memories/session/plan.md`. The plan names every file to touch, every verification step, and the wave's exit criteria. Track the current phase explicitly throughout the work — see your tool's adapter file for the mechanism.
+1. **Plan** — before any code change, write a detailed plan to the session plan (see your tool's adapter file for exactly where this lives). The plan names every file to touch, every verification step, and the wave's exit criteria. Track the current phase explicitly throughout the work — see your tool's adapter file for the mechanism.
 2. **Implement** — code, config, fixtures, tests.
 3. **Documentation update** — first-class part of the wave, not a follow-up. See *Documentation update phase* below.
 4. **Verification** — run the test suites and any smoke commands listed in the plan. Distinguish failures caused by this wave from pre-existing failures, and call the pre-existing ones out by name when reporting.
@@ -50,9 +50,9 @@ Mark a wave done only after verification passes.
 | File | Lifetime | Purpose |
 |---|---|---|
 | `implementation_plan.md` (repo root) | Persistent across sessions | The forward-looking backlog. Lists pending and in-progress waves. Updated regularly as work lands or priorities shift. The cross-session memory for what is left to do. |
-| `/memories/session/plan.md` | One conversation | The detailed playbook for the wave currently being implemented. Created right before implementation by picking the next priorities from `implementation_plan.md` and expanding them into concrete steps. Discarded when the conversation ends. |
+| Session plan (path varies by tool — see your tool's adapter file) | One conversation | The detailed playbook for the wave currently being implemented. Created right before implementation by picking the next priorities from `implementation_plan.md` and expanding them into concrete steps. Discarded when the conversation ends. |
 
-`/memories/session/plan.md` always derives from `implementation_plan.md`. Never start implementing without it.
+The session plan always derives from `implementation_plan.md`. Never start implementing without it.
 
 ## Implementation plan maintenance
 
