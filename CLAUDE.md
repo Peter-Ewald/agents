@@ -1,6 +1,9 @@
 # Claude Code — Working Instructions
 
-**Before doing anything else this session, read [`instructions.md`](instructions.md).** That file is the shared source of truth for all conventions. The sections below add Claude Code-specific mechanics that extend or override it.
+@instructions.md
+
+The file above is the shared source of truth for all conventions. The sections below add Claude
+Code-specific mechanics that extend or override it.
 
 ---
 
@@ -16,9 +19,12 @@ For wave commit messages, draft the full message in chat first. Pass it via `-m 
 
 ## Chat vs. file updates
 
-Do not update any file (code, .md, implementation plan) until I explicitly say so — for example "update the implementation plan" or "write that down."
+File changes are gated by plan mode (see `instructions.md`, Working Mode), not by a separate verbal
+go-ahead: stay in plan mode while discussing, and only touch files after exiting it — either through plan
+mode's own approval prompt, or for changes small enough that plan mode was skipped entirely.
 
-This applies per topic: in a single conversation I may have already said to update files for some topics while we're still discussing others. Apply file updates only to topics where I gave the explicit instruction.
+This still applies per topic: in a single conversation some topics may already be past approval while
+others are still being discussed. Only touch files for topics that have actually cleared plan mode.
 
 ## Chat answer style
 
