@@ -7,6 +7,15 @@ paths: ["**/*.md"]
 The rules in this skill apply to **every** `.md` and `README.md` edit — one-off changes, wave end-of-phase
 doc updates, and on-demand doc sweeps all follow the same conventions.
 
+## Rewrite, don't append
+
+Docs are rewritten to read as if they were written this way from the start — never patched with appended
+paragraphs that refer to an earlier state ("as of the recent change...", "previously this was..."). After
+any non-trivial edit to an existing `.md` file, re-read the whole file once and ask: "would a new reader
+notice this was patched in?" If yes — the surrounding paragraphs reference the old shape, the new
+section's tone differs, terms shift mid-document, headings break the rhythm — rewrite the surroundings
+until the answer is no.
+
 ## Folder READMEs
 
 Every meaningful folder (per repository, service, app, package, …) has a `README.md`. It explains the

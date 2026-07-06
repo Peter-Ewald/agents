@@ -18,11 +18,7 @@ the `doc-conventions` skill; this sweep is the discovery process.
    - completed waves still mentioned in `implementation_plan.md`,
    - file links that no longer resolve,
    - mermaid diagrams that violate the rendering rules in `doc-conventions`.
-3. **Also cross-check docs against the actual implementation.** Reading the source as part of the sweep is
-   expected. If, while reading code that recent changes did not touch, something is described inaccurately
-   or not at all in the docs in scope, fix that too. The sweep is about doc–code consistency overall, not
-   only about the diff from the last change.
+3. **Also cross-check docs against the actual implementation.** Reading the source as part of the sweep is expected. If, while reading code that recent changes did not touch, something is described inaccurately or not at all in the docs in scope, fix that too. The sweep is about doc–code consistency overall, not only about the diff from the last change.
 4. Propose the fixes as a plan first. Apply them only after the user confirms.
 
-A sweep never adds new content for its own sake. It rewrites, removes, or relocates existing content, or
-fills in gaps where the docs lie about the code.
+A sweep never adds new content for its own sake. It rewrites, removes, or relocates existing content, or fills in gaps where the docs lie about the code.

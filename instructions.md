@@ -12,10 +12,6 @@ Shared conventions for all AI coding assistants. Tool-specific adapters (`CLAUDE
 - In chat, address me directly and may use first person. In any committed file (code comment, `.md`, commit message), write for a future repo reader who has no access to this conversation — no "as we discussed", no "per your request".
 - Increase readability with tables, lists, and (in `.md` files only — not chat) mermaid diagrams. Keep prose concise. Build mermaid diagrams vertically; use swim lanes whenever an additional dimension improves separation.
 
-## Native rewrite check
-
-After any non-trivial edit to an existing `.md` file, re-read the whole file once and ask: "would a new reader notice this was patched in?" If yes — the surrounding paragraphs reference the old shape, the new section's tone differs, terms shift mid-document, headings break the rhythm — rewrite the surroundings until the answer is no.
-
 ---
 
 # Clarifying Questions (Both Directions)
@@ -69,7 +65,7 @@ Read this way, the plan always answers one question: *what is left to do?*
 
 ## Documentation update phase
 
-Every wave finishes with a documentation pass. Not optional, not a follow-up task — part of the wave's definition of done. All rewrites follow the `doc-conventions` skill (terminology, glossary placement, markdown/mermaid rules) and the native rewrite check above.
+Every wave finishes with a documentation pass. Not optional, not a follow-up task — part of the wave's definition of done. All rewrites follow the `doc-conventions` skill (terminology, glossary placement, markdown/mermaid rules, and the native rewrite check).
 
 The pass covers:
 
