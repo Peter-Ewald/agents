@@ -4,15 +4,22 @@ Forward-looking backlog for turning `instructions.md` / `CLAUDE.md` from shared 
 Code harness — native plan mode, skills, subagents, and hooks doing the enforcement that prose currently
 only asks for. Detailed enough to implement directly; anything still genuinely open is called out inline.
 
-Cross-repo distribution is already in place: shared subagents, skills, and hooks live under this repo's
-`.claude/` (see [`.claude/README.md`](.claude/README.md)), exposed to other repos via `~/.claude/agents`
-and a per-repo `.claude/skills` symlink. Whether Claude Code also honors a user-level `~/.claude/skills`
-directory (which would let the per-repo symlinks collapse into one) is still unverified — see
-`~/.claude/skills/test-probe/SKILL.md` for the pending manual check.
+Cross-repo distribution is already in place: shared subagents and skills live under this repo's `.claude/`
+(see [`.claude/README.md`](.claude/README.md)), exposed to every repo via a single `~/.claude/agents` and
+`~/.claude/skills` symlink each — confirmed working, including for skills, which aren't documented as a
+user-level location but do get picked up. Hook scripts (not built yet) will be referenced by absolute path
+from `~/.claude/settings.json` instead, so they need no distribution mechanism of their own.
 
-Known repos in scope for repo-root changes (Wave 1): this repo (`agents`), `Task Force Evaluation`
-(contains `sdk/semantic_tracing`, `sdk/semantic_evaluation`), `LLM Evaluation Architecture`, `Project Green`,
-`ramgpt-next`, `Litellm-Model integration layer`. Extend to other repos as they come up.
+Known repos in scope for repo-root changes (Wave 1): this repo (`agents`), `Project Green`, `ramgpt-next`,
+and three project folders that are actually subdirectories of one shared git repo, `Chapter_Repos`, not
+separate repos — `Task Force Evaluation` (contains `sdk/semantic_tracing`, `sdk/semantic_evaluation`),
+`LLM Evaluation Architecture`, and `Litellm-Model integration layer`. Each still gets its own `CLAUDE.md`
+stub (Claude Code sessions are opened per subdirectory), but anything gitignore-related for them belongs in
+`Chapter_Repos/.gitignore` with `**/`-prefixed patterns, not in a per-subdirectory `.gitignore` — an
+unprefixed pattern placed in a subdirectory's own file only protects that one subdirectory and drifts from
+the other two; a prefixed pattern at the shared root covers all of them (and any future one) at once, and a
+commit touching any of the three is one commit in `Chapter_Repos`, not three. Extend to other repos as they
+come up.
 
 ## Suggested processing order
 

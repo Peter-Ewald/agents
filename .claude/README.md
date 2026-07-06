@@ -7,7 +7,7 @@ for the rollout plan.
 | Folder | Purpose | Distributed via |
 |---|---|---|
 | [`agents/`](agents/README.md) | Subagent definitions | symlinked from `~/.claude/agents` |
-| [`skills/`](skills/README.md) | Skills | symlinked from each repo's `.claude/skills` (or `~/.claude/skills`, pending verification) |
+| [`skills/`](skills/README.md) | Skills | symlinked from `~/.claude/skills` |
 | [`hooks/`](hooks/README.md) | Hook scripts | referenced by absolute path from `~/.claude/settings.json` |
 
 Currently empty except for structural placeholders — populated as the waves in
