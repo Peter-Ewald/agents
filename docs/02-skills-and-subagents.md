@@ -32,12 +32,17 @@ session regardless of whether any docs are being touched — and it's the single
 
 [`../.claude/agents/doc-sweep.md`](../.claude/agents/doc-sweep.md)
 
-Triggered by saying "update documentation" without further scope. Tools restricted to `Read`, `Grep`,
-`Glob`, `Edit` — no `Bash` — since it's meant to be a pure audit. Deliberately a **fresh** subagent, not a
-fork: a full documentation consistency sweep is supposed to re-derive doc-vs-code accuracy from scratch,
-cross-checking docs against the actual current implementation, not trust whatever the recent conversation
-happened to already believe. Preloads `doc-conventions` via its `skills:` frontmatter field so the same
-rules apply without needing a markdown file to be touched first.
+Triggered by saying "update documentation" without further scope, or invoked directly for a scoped
+documentation rewrite. Full tool access (`Read`, `Grep`, `Glob`, `Edit`, `Bash`, `Write`) — a sweep can
+rename, split, merge, or create documentation files as the reorganization requires, not just edit content
+in place. Deliberately a **fresh** subagent, not a fork: a full documentation consistency sweep is supposed
+to re-derive doc-vs-code accuracy from scratch, cross-checking docs against the actual current
+implementation, not trust whatever the recent conversation happened to already believe. Preloads
+`doc-conventions` via its `skills:` frontmatter field so the same rules apply without needing a markdown
+file to be touched first — this is also why it's the right subagent for a documentation-restructuring task
+in general, not just the bare "update documentation" trigger phrase: a `general-purpose` agent has the same
+tool access but doesn't get `doc-conventions` preloaded, so it would need the rules pasted into its prompt
+by hand.
 
 ## `sdk-release` (skill)
 

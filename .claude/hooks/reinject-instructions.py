@@ -32,16 +32,19 @@ def main():
     ]
     content = "\n".join(claude_md_lines).strip() + "\n\n" + INSTRUCTIONS_MD.read_text()
 
-    print(
-        json.dumps(
-            {
-                "hookSpecificOutput": {
-                    "hookEventName": hook_event_name,
-                    "additionalContext": content,
-                }
+    # PreCompact does not support hookSpecificOutput — inject via systemMessage
+    # so the instructions are available to Claude during the compaction prompt.
+    # SessionStart uses hookSpecificOutput.additionalContext (the normal path).
+    if hook_event_name == "PreCompact":
+        output: dict = {"systemMessage": content}
+    else:
+        output = {
+            "hookSpecificOutput": {
+                "hookEventName": hook_event_name,
+                "additionalContext": content,
             }
-        )
-    )
+        }
+    print(json.dumps(output))
 
 
 if __name__ == "__main__":

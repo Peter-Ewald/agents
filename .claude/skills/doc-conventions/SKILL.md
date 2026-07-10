@@ -111,5 +111,11 @@ Recommended inline definition box pattern:
 	    special tracked meaning. The same concept always gets the same color within a document; colors do
 	    not carry between documents. Pick 3–5 mid-luminance colors (e.g. `#5588cc`, `#55aa77`, `#cc8844`,
 	    `#9966cc`) for tracked concepts — saturated enough to distinguish, not so bright they dominate.
+	    If the repository has its own corporate/brand color palette (a `color_guidelines.md`, brand
+	    style guide, or similar source of truth), pick from that palette instead of the generic example
+	    colors above — use each brand color's own light tint for `fill` and its full-strength value for
+	    `stroke`. In that case the same role-to-color mapping should carry across every diagram in the
+	    repository (not just within one document), since a brand palette is a small, deliberately reused
+	    set of colors rather than an arbitrary per-document choice.
 	11. Keep node labels short — a few words or a function signature. Use surrounding prose for
 	    explanation rather than long sentences inside boxes.

@@ -74,6 +74,24 @@ Blocks (exit 2) a `git commit` if a staged `pyproject.toml` shows a version bump
 `CHANGELOG.md` in the same package directory isn't also staged. Enforces changelog-before-release ordering
 mechanically instead of relying on remembering to write the changelog first.
 
+## `validate_excalidraw_bindings.py`
+
+**Event:** `PostToolUse` (matcher: `Edit|Write`).
+
+Blocks (exit 2) a Write/Edit to any `.excalidraw` file, in any repo, if its native bindings are broken: an
+arrow's `startBinding`/`endBinding` missing or not reciprocated by the target element's `boundElements`, a
+bound text's `containerId` not reciprocated, or a `groupIds` entry used by only one element. No-ops on
+anything that isn't an `Edit`/`Write` to a `.excalidraw` file. Registered globally rather than per-repo
+because the check is entirely generic — no dependency on any repo's brand or theme conventions. The
+authoritative copy (with its own test suite) lives in the "Agent Toolkit for Presentations and Visuals"
+repo's `.claude/hooks/validate_excalidraw_bindings.py`, alongside the `diagram-excalidraw` skill it backs
+up; this copy is kept in sync with that one by hand.
+
+```sh
+echo '{"tool_name": "Write", "tool_input": {"file_path": "/path/to/diagram.excalidraw"}}' \
+  | ../.claude/hooks/validate_excalidraw_bindings.py; echo "exit: $?"
+```
+
 ## `statusline.py` (not a lifecycle hook, but lives alongside these)
 
 [`../.claude/statusline.py`](../.claude/statusline.py), registered under `statusLine` rather than `hooks`
