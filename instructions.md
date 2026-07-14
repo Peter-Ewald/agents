@@ -60,9 +60,46 @@ The backlog is strictly forward-looking:
 - It lists **pending and in-progress waves only**.
 - When a wave completes, its entire section is **removed**, not marked "done" or struck through. Anything still relevant from a completed wave belongs in `docs/` or `README.md` instead.
 - Cross-references to completed waves in remaining sections are rewritten to drop the dependency language ("requires Wave X" becomes a plain statement of what is already true).
-- The "suggested processing order" table is renumbered after every removal so step numbers are dense.
+- The Next Up tier's ordering table is renumbered after every removal so step numbers are dense.
 
 Read this way, the backlog always answers one question: *what is left to do?* `docs/history/` (below) answers the complementary question: *what was already tried, and why did it end up this way?*
+
+### Backlog tiers
+
+`backlog.md` groups pending work into three tiers, ordered by descending certainty and immediacy:
+
+- **Next Up** — ordered, will land soon (today/this week/this month). The processing-order table lives
+  here, and only here.
+- **Planned** — committed to eventually building, not yet sequenced. Grouped by topic via headings; no
+  ordering implied between or within topics.
+- **Later Considerations** — ideas, techniques, or features that may never be built. Kept so a good idea
+  isn't lost; revisit when its stated trigger condition becomes true, not on a schedule.
+
+Promoting an item between tiers (e.g. a Later Considerations idea becomes Planned once its trigger fires,
+or a Planned item gets sequenced into Next Up) means moving its text to the new section and rewriting it
+to fit that tier's tone — no note is left behind recording which tier it came from, per the rewrite-not-
+append rule. An item is only ever planned (gets a session plan) after it reaches Next Up — nothing jumps
+straight from Later Considerations into a wave.
+
+Omit a tier's heading entirely when it has no items. Add topic sub-headings (`###`) within Planned and
+Later Considerations once more than one distinct thread accumulates; Next Up stays a flat ordered table.
+
+Optionally, add a `## Context for planning agents` table before the tiers — links to docs an agent should
+read before expanding a backlog item into a session plan.
+
+Add a `## Contents` section once scanning the file to find the right tier or topic takes real effort — no
+fixed heading count triggers this, the same judgment call as everywhere else in this convention. Remove it
+again if the backlog shrinks back down.
+
+**Tier disclosure.** When asked about the backlog conversationally, surface only the tier the question's
+horizon implies — don't dump the whole file by default:
+
+| Question shape | Tiers to surface |
+|---|---|
+| "what's next", "what should we work on", "what's queued" | Next Up only |
+| "what's in the backlog" (bare, no qualifier) | Next Up + Planned |
+| "what's deferred", "later considerations", "any ideas for later" | Later Considerations only |
+| "show me the whole backlog", or reading `backlog.md` directly | all three tiers, verbatim |
 
 ## Plan history
 

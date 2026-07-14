@@ -4,10 +4,9 @@ argument-hint: [wave-name-or-number]
 description: Runs a wave from backlog.md through its five phases end to end — plan, implement, documentation update, verification, commit proposal — per instructions.md's Implementation Waves section. Use when starting or continuing work on a specific pending wave, or when the user says things like "let's start wave 2" / "continue wave 3".
 ---
 
-Drive the target wave (identified by `$ARGUMENTS`, or the next one in `backlog.md`'s
-processing-order table if unspecified) through all five phases from `instructions.md`'s Implementation
-Waves section. Run inline — do not fork yourself for this; only the Documentation update phase below
-forks.
+Drive the target wave (identified by `$ARGUMENTS`, or the next one in `backlog.md`'s Next Up tier if
+unspecified) through all five phases from `instructions.md`'s Implementation Waves section. Run inline —
+do not fork yourself for this; only the Documentation update phase below forks.
 
 At every phase transition:
 1. Update the `TodoWrite` list so exactly one of the five phases is `in_progress` and prior phases are
@@ -19,7 +18,12 @@ At every phase transition:
 
 ## 1. Plan
 
-Call `EnterPlanMode`. Read `backlog.md` and locate the target wave. Before writing the session plan, read
+Call `EnterPlanMode`. Read `backlog.md` and locate the target wave in its Next Up tier. If `$ARGUMENTS`
+(or the discussion) instead names something sitting in Planned or Later Considerations, treat that as a
+promotion: move it into Next Up as part of this phase — rewritten to fit that tier's tone, per
+`instructions.md`'s "Backlog tiers" — before planning it like any other wave.
+
+Before writing the session plan, read
 `docs/history/index.md` if it exists — for any entry whose title looks related to this wave's topic, open
 that specific detail file. Use it to avoid re-proposing a direction already tried and dropped, and cite it
 in the session plan when relevant ("considered in `docs/history/2026-05-02-...md` — rejected because X").

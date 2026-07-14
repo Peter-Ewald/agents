@@ -7,7 +7,7 @@ distinguishes a skill from a subagent from a fork.
 
 [`../.claude/skills/wave/SKILL.md`](../.claude/skills/wave/SKILL.md)
 
-Drives a wave from `backlog.md` through instructions.md's five phases end-to-end: plan, implement,
+Drives a wave from `backlog.md`'s Next Up tier through instructions.md's five phases end-to-end: plan, implement,
 documentation update, verification, commit proposal. Runs inline in the main agent rather than forking
 itself, since Plan and Implement need to actually happen in the calling conversation — only the
 Documentation update phase spins off a fork, for the reason `doc-conventions` below explains. At each

@@ -15,7 +15,10 @@ proposal. See [`../instructions.md`](../instructions.md#implementation-waves) fo
 
 The persistent, forward-looking `backlog.md` at a repo's root (formerly named `implementation_plan.md`).
 Lists pending and in-progress waves only — a completed wave's section is removed entirely, not marked
-done. See [`../instructions.md`](../instructions.md#backlog-maintenance).
+done. Grouped into three tiers by descending certainty and immediacy — **Next Up** (ordered, landing soon),
+**Planned** (committed, not yet sequenced), **Later Considerations** (ideas that may never be built) — so
+an agent can surface just the tier a question's horizon implies instead of the whole file. See
+[`../instructions.md`](../instructions.md#backlog-tiers).
 
 ## Plan history
 
