@@ -13,9 +13,19 @@ Use Claude Code's **TodoWrite tool** to mirror wave phases. Create one todo item
 
 ## Session plan location
 
-Write the session plan (see `instructions.md`, Implementation Waves) to a file in this session's
-scratchpad directory — this environment has no `/memories/` mount. Discarded when the session ends, same
-as the scratchpad itself.
+Claude Code's native plan mode already writes the session plan to a durable, per-session file at
+`~/.claude/plans/<slug>.md` — not the scratchpad, and not discarded when the session ends. Write (and
+revise) the session plan there, the same file plan mode already manages; no separate scratchpad copy is
+needed.
+
+## Plan history archiving
+
+When a wave's Documentation update phase reaches the `docs/history/` step (see `instructions.md`, Plan
+history), copy the session plan from `~/.claude/plans/<slug>.md` into `docs/history/YYYY-MM-DD-<slug>.md`
+in the target repo, prefixed with the date/title/outcome header, and append its line to
+`docs/history/index.md`. Do this whether the wave completed or was dropped partway through — a dropped
+plan still archives at the point the user decides not to proceed, with outcome `dropped` and the stated
+reason, rather than waiting for a wave that will never reach its Documentation update phase.
 
 ## Shell commands and git
 

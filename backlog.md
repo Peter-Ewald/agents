@@ -1,4 +1,4 @@
-# Implementation Plan
+# Backlog
 
 Forward-looking backlog for turning `instructions.md` / `CLAUDE.md` from shared prose into a real Claude
 Code harness — native plan mode, skills, subagents, and hooks doing the enforcement that prose currently

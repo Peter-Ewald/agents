@@ -11,6 +11,22 @@ runs through five phases in order: Plan, Implement, Documentation update, Verifi
 proposal. See [`../instructions.md`](../instructions.md#implementation-waves) for the full definition and
 [`00-agents-overview.md`](00-agents-overview.md) for how the phases map onto this harness's mechanisms.
 
+## Backlog
+
+The persistent, forward-looking `backlog.md` at a repo's root (formerly named `implementation_plan.md`).
+Lists pending and in-progress waves only — a completed wave's section is removed entirely, not marked
+done. See [`../instructions.md`](../instructions.md#backlog-maintenance).
+
+## Plan history
+
+The backward-looking counterpart to the backlog: `docs/history/` in a consuming repo, holding one file per
+concluded plan (completed, dropped, or superseded) plus a cheap `index.md` of titles and outcomes. Checked
+before planning new work, so an agent doesn't re-propose a direction already tried and dropped for a good
+reason. Governed by a guardrail — **history informs, it never narrates** — that keeps the reasoning a
+history entry surfaces out of code and docs as anything but a present-tense justification; no "first we
+tried X, then Y" timelines leak into the docs themselves. See
+[`../instructions.md`](../instructions.md#plan-history).
+
 ## Plan mode
 
 A Claude Code permission mode that blocks `Edit`/`Write` calls at the harness level — not by convention,

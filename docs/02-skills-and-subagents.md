@@ -7,15 +7,22 @@ distinguishes a skill from a subagent from a fork.
 
 [`../.claude/skills/wave/SKILL.md`](../.claude/skills/wave/SKILL.md)
 
-Drives a wave from `implementation_plan.md` through instructions.md's five phases end-to-end: plan,
-implement, documentation update, verification, commit proposal. Runs inline in the main agent rather than
-forking itself, since Plan and Implement need to actually happen in the calling conversation — only the
+Drives a wave from `backlog.md` through instructions.md's five phases end-to-end: plan, implement,
+documentation update, verification, commit proposal. Runs inline in the main agent rather than forking
+itself, since Plan and Implement need to actually happen in the calling conversation — only the
 Documentation update phase spins off a fork, for the reason `doc-conventions` below explains. At each
 phase transition it updates `TodoWrite` and overwrites `/tmp/claude-wave-phase-${CLAUDE_SESSION_ID}`, which
 the statusline script reads to show the current phase. That path — not the session's own scratchpad
 directory — is deliberate: the statusline runs as a separate process that only receives a session ID on
 its own stdin, not this session's scratchpad path, so the hand-off point has to be something derivable
 from the session ID alone.
+
+Before writing the session plan (Phase 1), it checks `docs/history/index.md` for prior plans on a related
+topic, so it doesn't re-propose a direction already tried and dropped — and if the plan itself gets dropped
+instead of approved, it's archived right there in Phase 1, not left to a Documentation update phase it will
+never reach. A plan that *does* get approved and completed is archived at Phase 3 instead, alongside the
+rest of the Documentation update checklist. See `instructions.md`'s *Plan history* section for the
+convention.
 
 ## `doc-conventions` (skill)
 
@@ -43,6 +50,11 @@ file to be touched first — this is also why it's the right subagent for a docu
 in general, not just the bare "update documentation" trigger phrase: a `general-purpose` agent has the same
 tool access but doesn't get `doc-conventions` preloaded, so it would need the rules pasted into its prompt
 by hand.
+
+Also checks `docs/history/index.md` (if present) for entries relevant to the area being swept, to write a
+better-grounded "why" for existing patterns — but per the *Plan history* guardrail in `instructions.md`,
+that history is synthesized into a present-tense explanation, never narrated as a timeline in the doc
+itself.
 
 ## `sdk-release` (skill)
 

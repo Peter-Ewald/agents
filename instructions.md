@@ -16,7 +16,7 @@ Shared conventions for all AI coding assistants. Tool-specific adapters (`CLAUDE
 
 # Clarifying Questions (Both Directions)
 
-The same shape applies whether I am asking you for clarification, or you are asking me for guidance during planning, discussion, or while drafting `implementation_plan.md` or the session plan:
+The same shape applies whether I am asking you for clarification, or you are asking me for guidance during planning, discussion, or while drafting `backlog.md` or the session plan:
 
 - Explain the broader context first: the goal, the design principles in play, what the choice influences.
 - Define any term that could create different mental models.
@@ -41,27 +41,62 @@ Every wave runs through fixed phases in order:
 
 Mark a wave done only after verification passes.
 
-## Plan files: cross-session vs session-scoped
+## Plan files: lifetime and purpose
 
 | File | Lifetime | Purpose |
 |---|---|---|
-| `implementation_plan.md` (repo root) | Persistent across sessions | The forward-looking backlog. Lists pending and in-progress waves. Updated regularly as work lands or priorities shift. The cross-session memory for what is left to do. |
-| Session plan (path varies by tool — see your tool's adapter file) | One conversation | The detailed playbook for the wave currently being implemented. Created right before implementation by picking the next priorities from `implementation_plan.md` and expanding them into concrete steps. Discarded when the conversation ends. |
+| `backlog.md` (repo root) | Persistent across sessions | The forward-looking backlog. Lists pending and in-progress waves. Updated regularly as work lands or priorities shift. The cross-session memory for what is left to do. |
+| Session plan (path varies by tool — see your tool's adapter file) | One conversation | The detailed playbook for the wave currently being implemented. Created right before implementation by picking the next priorities from `backlog.md` and expanding them into concrete steps. Archived to `docs/history/` when the wave concludes — see *Plan history* below — where the tool supports it; otherwise discarded when the conversation ends. |
+| `docs/history/` (repo root) | Persistent across sessions | The backward-looking record of concluded plans — completed, dropped, or superseded. The cross-session memory for what was already tried and why. See *Plan history* below. |
 
-The session plan always derives from `implementation_plan.md`. Never start implementing without it.
+The session plan always derives from `backlog.md`. Never start implementing without it.
 
-## Implementation plan maintenance
+## Backlog maintenance
 
-Every repository has a single **`implementation_plan.md` at the repository root**, alongside the top-level `README.md`. It is a planning artifact, not documentation, which is why it lives at the root and not under `docs/`. Other planning-shaped top-level files (executive summaries, programme plans) live next to it for the same reason.
+Every repository has a single **`backlog.md` at the repository root**, alongside the top-level `README.md`. It is a planning artifact, not documentation, which is why it lives at the root and not under `docs/`. Other planning-shaped top-level files (executive summaries, programme plans) live next to it for the same reason.
 
-The plan is strictly forward-looking:
+The backlog is strictly forward-looking:
 
 - It lists **pending and in-progress waves only**.
 - When a wave completes, its entire section is **removed**, not marked "done" or struck through. Anything still relevant from a completed wave belongs in `docs/` or `README.md` instead.
 - Cross-references to completed waves in remaining sections are rewritten to drop the dependency language ("requires Wave X" becomes a plain statement of what is already true).
 - The "suggested processing order" table is renumbered after every removal so step numbers are dense.
 
-Read this way, the plan always answers one question: *what is left to do?*
+Read this way, the backlog always answers one question: *what is left to do?* `docs/history/` (below) answers the complementary question: *what was already tried, and why did it end up this way?*
+
+## Plan history
+
+Every repository that uses waves keeps a `docs/history/` folder: a backward-looking record of concluded
+plans, so an agent planning new work can check whether a direction was already tried and dropped for a
+good reason, instead of re-discovering the same dead end.
+
+- **`docs/history/index.md`** — one line per concluded plan: date, topic title, outcome
+  (`completed` / `dropped` / `superseded`), and a link to the detail file. Small and cheap to read in full
+  before planning.
+- **`docs/history/YYYY-MM-DD-<slug>.md`** — one file per concluded plan: the session plan as it stood when
+  it concluded, with a short header (date, title, outcome, and — if dropped — the reason).
+
+Both are committed to git. This is project history for human readers too, not agent scratch state.
+
+**Token efficiency**: read `index.md` first — it's one small file. Only open a specific detail file whose
+title looks relevant to the current task; don't open every entry on the chance one might matter.
+
+**Every wave** checks this history before planning (Plan phase). A completed wave adds to it during
+Documentation update (see below). A plan that gets dropped instead of approved adds to it right there, in
+the Plan phase, rather than waiting for a Documentation update phase that a dropped plan will never reach.
+The exact mechanism (where the session plan file lives, how the archive step is triggered) is tool-specific;
+see your tool's adapter file.
+
+**Guardrail — history informs, it never narrates.** Reading `docs/history/` must never change what code or
+docs *say*. The rewrite-not-append rule above already forbids narrating a file's evolution; that holds with
+equal force now that a real history exists to narrate from. An agent may read that per-request caching was
+rejected for a race condition, and use that *reason* to write a present-tense justification — "the cache is
+shared across requests to avoid the race described in §X" — in the current docs. It must not write "we
+first tried per-request caching, then switched to a shared cache." This is symmetric with the backlog:
+future intent (the backlog) must not leak into code or docs as a roadmap unless explicitly asked for; past
+intent (the history) must not leak in as a timeline either. A `CHANGELOG.md` entry is the one form that
+tolerates more temporal language by convention (it's inherently "what changed in this version") — but it
+still describes this release's change, not a replay of earlier rejected approaches.
 
 ## Documentation update phase
 
@@ -72,8 +107,11 @@ The pass covers:
 - **README files** in every folder the wave touched, rewritten so they read as if the new shape was the original shape.
 - **`docs/*.md`** files whose subject the wave changed, rewritten the same way. Never append "as of wave N…" paragraphs.
 - **`docs/glossary.md`** in each affected scope — add new terms, remove retired ones, update definitions that drifted.
-- **`implementation_plan.md`** — remove the completed wave's section entirely. If the wave revealed something that conflicts with or changes the shape of other pending waves, also update *those* sections so the backlog stays accurate. If the right update is unclear or large, raise it in chat after the wave instead of guessing.
-- **`CHANGELOG.md`** if the wave ships a released package — one entry under the new version, written for future users of the package, not for me. Use this structure:
+- **`backlog.md`** — remove the completed wave's section entirely. If the wave revealed something that conflicts with or changes the shape of other pending waves, also update *those* sections so the backlog stays accurate. If the right update is unclear or large, raise it in chat after the wave instead of guessing.
+- **`docs/history/`** — archive this wave's session plan (see *Plan history* above) and append its line to
+  `docs/history/index.md`. A dropped plan is archived earlier, in the Plan phase, not here — see *Plan
+  history* for why.
+- **`CHANGELOG.md`** if the wave ships a released package — one entry under the new version, written for future users of the package, not for me. Check `docs/history/index.md` for the plan(s) behind this release and ground the narrative paragraph in the documented intent rather than re-deriving it from the diff alone. Use this structure:
 
   ```markdown
   ## [x.y.z] - YYYY-MM-DD

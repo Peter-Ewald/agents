@@ -1,10 +1,10 @@
 ---
 name: wave
 argument-hint: [wave-name-or-number]
-description: Runs a wave from implementation_plan.md through its five phases end to end — plan, implement, documentation update, verification, commit proposal — per instructions.md's Implementation Waves section. Use when starting or continuing work on a specific pending wave, or when the user says things like "let's start wave 2" / "continue wave 3".
+description: Runs a wave from backlog.md through its five phases end to end — plan, implement, documentation update, verification, commit proposal — per instructions.md's Implementation Waves section. Use when starting or continuing work on a specific pending wave, or when the user says things like "let's start wave 2" / "continue wave 3".
 ---
 
-Drive the target wave (identified by `$ARGUMENTS`, or the next one in `implementation_plan.md`'s
+Drive the target wave (identified by `$ARGUMENTS`, or the next one in `backlog.md`'s
 processing-order table if unspecified) through all five phases from `instructions.md`'s Implementation
 Waves section. Run inline — do not fork yourself for this; only the Documentation update phase below
 forks.
@@ -19,10 +19,19 @@ At every phase transition:
 
 ## 1. Plan
 
-Call `EnterPlanMode`. Read `implementation_plan.md` and locate the target wave. Write (or refine) the
-session plan — see `CLAUDE.md`'s "Session plan location" for where — expanding the wave's tasks into
-concrete steps: exact files to touch, exact verification commands, exit criteria. Stay in this phase for
-as long as discussion continues, revising the plan on feedback. Call `ExitPlanMode` only once ready.
+Call `EnterPlanMode`. Read `backlog.md` and locate the target wave. Before writing the session plan, read
+`docs/history/index.md` if it exists — for any entry whose title looks related to this wave's topic, open
+that specific detail file. Use it to avoid re-proposing a direction already tried and dropped, and cite it
+in the session plan when relevant ("considered in `docs/history/2026-05-02-...md` — rejected because X").
+Write (or refine) the session plan — see `CLAUDE.md`'s "Session plan location" for where — expanding the
+wave's tasks into concrete steps: exact files to touch, exact verification commands, exit criteria. Stay in
+this phase for as long as discussion continues, revising the plan on feedback. Call `ExitPlanMode` only
+once ready.
+
+If the discussion concludes without proceeding to Implement — the plan is dropped rather than approved —
+archive it anyway, per `CLAUDE.md`'s "Plan history archiving", with outcome `dropped` and the reason given,
+before ending the discussion. A dropped plan is exactly the kind of thing a future wave should be able to
+find in `docs/history/`.
 
 ## 2. Implement
 
@@ -37,8 +46,8 @@ was just implemented. Its task prompt must explicitly tell it to:
 - Apply the `doc-conventions` skill's rules (terminology, glossary placement, README structure,
   markdown/mermaid rendering).
 - Follow the "Documentation update phase" checklist in `instructions.md` (README files, `docs/*.md`,
-  `docs/glossary.md`, removing the completed wave's section from `implementation_plan.md`, `CHANGELOG.md`
-  if a package was released).
+  `docs/glossary.md`, removing the completed wave's section from `backlog.md`, archiving the session plan
+  to `docs/history/` per `CLAUDE.md`'s "Plan history archiving", `CHANGELOG.md` if a package was released).
 
 Do this even if no `.md` file was touched during Implement — path-based skill triggering only fires on
 markdown edits, and this phase needs the conventions regardless.
@@ -57,5 +66,5 @@ Draft the commit message per the template in `instructions.md`'s "Commit message
 chat and wait for explicit confirmation before running the real `git commit` — see `CLAUDE.md`'s "Shell
 commands and git" for the exact mechanism.
 
-Mark the wave done (remove its section from `implementation_plan.md`, per Wave 3's own instructions) only
-after verification has actually passed.
+Mark the wave done (remove its section from `backlog.md` and archive the session plan to `docs/history/`,
+per Phase 3's own instructions) only after verification has actually passed.

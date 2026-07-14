@@ -10,7 +10,7 @@ Claude Code follow the same working style everywhere, without copy-pasting instr
 | [`instructions.md`](instructions.md) | Tool-agnostic conventions (working mode, documentation rules, how waves are structured). Shared with other AI coding assistants, not just Claude Code. |
 | [`CLAUDE.md`](CLAUDE.md) | Claude Code-specific mechanics that extend `instructions.md` (imports it directly). |
 | [`copilot_instructions.md`](copilot_instructions.md) | The GitHub Copilot adapter, parallel to `CLAUDE.md`. |
-| [`implementation_plan.md`](implementation_plan.md) | The forward-looking backlog for this repo itself — what's still being built. |
+| [`backlog.md`](backlog.md) | The forward-looking backlog for this repo itself — what's still being built. |
 | [`.claude/`](.claude/README.md) | The actual skills, subagents, and hook scripts, distributed to every other repo. |
 | [`docs/`](docs/00-agents-overview.md) | Detailed reference docs — start at [`docs/00-agents-overview.md`](docs/00-agents-overview.md). |
 
@@ -40,4 +40,6 @@ stubs), the import line is added to the top of that file instead of replacing it
   [`docs/02-skills-and-subagents.md`](docs/02-skills-and-subagents.md).
 - Curious how the cross-repo symlink setup actually works, including the monorepo gotchas it ran into?
   [`docs/03-cross-repo-distribution.md`](docs/03-cross-repo-distribution.md).
-- What's left to build? [`implementation_plan.md`](implementation_plan.md).
+- What's left to build? [`backlog.md`](backlog.md).
+- What was already tried, and why did it end up this way? A consuming repo's own `docs/history/` — see
+  `instructions.md`'s *Plan history* section for the convention (this repo has no history yet of its own).
