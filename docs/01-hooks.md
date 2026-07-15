@@ -39,6 +39,33 @@ echo '{"tool_name": "Edit", "tool_input": {"file_path": "/path/to/file.py"}, "cw
   | ../.claude/hooks/lint-changed-lines.py; echo "exit: $?"
 ```
 
+## `ruff-autofix.py`
+
+**Event:** `PostToolUse` (matcher: `Edit|Write`).
+
+Runs `uvx ruff check --fix` (safe fixes only — never `--unsafe-fixes`) then `uvx ruff format` on a
+just-edited `.py` file, whole-file. Fix runs before format, not after: removing an unused import can
+leave blank lines behind that only `ruff format` cleans up, so formatting first would leave that
+cleanup stranded until the next edit (confirmed non-idempotent within one invocation during testing).
+Whole-file rather than changed-lines-scoped because ruff has no partial-file/line-range autofix mode —
+and safe fixes are safe precisely because they can't change program behavior, so whole-file scope costs
+only extra diff noise, not correctness risk. Reports via `additionalContext` how many lines `ruff
+format` touched and how many issues `--fix` resolved, so the agent (and eventually the human reviewer)
+knows extra changes landed beyond the intended edit; stays silent if nothing changed. Never blocks
+(always exits 0) — blocking stays `lint-changed-lines.py`'s job. Fails open if `uvx`/ruff are
+unavailable.
+
+Registered ahead of `lint-changed-lines.py` in `~/.claude/settings.json`'s `PostToolUse` → `Edit|Write`
+array so its fixes land first — array order for hooks sharing a matcher is genuinely undocumented, but
+`lint-changed-lines.py` re-derives everything fresh from disk on every run with no cached state, so run
+order only affects how much friction an edit hits before landing a clean file, never whether a block
+verdict was ever actually wrong.
+
+```sh
+echo '{"tool_name": "Edit", "tool_input": {"file_path": "/path/to/file.py"}}' \
+  | ../.claude/hooks/ruff-autofix.py; echo "exit: $?"
+```
+
 ## `limit-web-search.py`
 
 **Events:** `UserPromptSubmit` and `SubagentStart` (mode `reset`); `PreToolUse`, matcher `WebSearch`

@@ -1,6 +1,6 @@
 # Skills and subagents
 
-Four pieces so far, each chosen for a different reason — see [glossary.md](glossary.md) for what
+Six pieces so far, each chosen for a different reason — see [glossary.md](glossary.md) for what
 distinguishes a skill from a subagent from a fork.
 
 ## `wave` (skill)
@@ -55,6 +55,52 @@ Also checks `docs/history/index.md` (if present) for entries relevant to the are
 better-grounded "why" for existing patterns — but per the *Plan history* guardrail in `instructions.md`,
 that history is synthesized into a present-tense explanation, never narrated as a timeline in the doc
 itself.
+
+See `instructions.md`'s "Documentation update: choosing the mechanism" for how this fits alongside a
+small inline edit and `wave`'s own forked Documentation update phase — three distinct shapes, not
+interchangeable.
+
+## `design-conventions` (skill)
+
+[`../.claude/skills/design-conventions/SKILL.md`](../.claude/skills/design-conventions/SKILL.md)
+
+Design and architecture principles — naming, module boundaries, error-handling philosophy, interface
+discipline — the code-design equivalent of `doc-conventions` (documentation quality) and
+`ruff-cleanup/RULES.md` (lint-fix quality). One file, not split like `ruff-cleanup`: design principles
+are narrative/read-and-apply, not a growing per-code lookup table. No `paths:` trigger — there's no
+file-glob that means "about to make a design decision" the way `**/*.md` means "editing a markdown
+file" — so it relies on natural-language matching plus explicit invocation from `instructions.md`'s Plan
+phase bullet and `wave/SKILL.md`'s Phase 1, both of which invoke it via the Skill tool per `CLAUDE.md`'s
+"Skill freshness" note rather than working from a remembered read.
+
+Seeded with five starter principles (naming clarity, boundary and ownership clarity, fail loud not
+silent, consistency over cleverness, minimum-contract interfaces) deliberately avoiding overlap with
+Claude Code's own baseline instructions — expected to grow from real cases the same way `RULES.md` does.
+
+## `ruff-cleanup` (skill)
+
+[`../.claude/skills/ruff-cleanup/SKILL.md`](../.claude/skills/ruff-cleanup/SKILL.md)
+
+Triggered by "clean up remaining ruff issues" or similar, or invoked directly (`/ruff-cleanup`). A
+**skill**, not a subagent like `doc-sweep` — runs inline in the main conversation, the same reason
+`wave`'s Implement phase stays inline: `doc-sweep` needs to be fresh specifically to avoid the agent's
+own potential self-serving read of "is this doc still accurate," but `ruff check`'s output is an
+external, objective source of truth regardless of what the conversation believes, so there's no
+analogous bias risk here — and the skill benefits from the conversation's own context on why recent
+edits were made.
+
+Defaults to PR-diff scope (files changed vs. the base branch, not the whole repo) — matches "minimal
+changes" and the literal "clean up before a PR" framing; whole-repo only runs if explicitly requested.
+Everything it finds already survived the `ruff-autofix` hook's safe fixes on every edit along the way,
+so by definition it needs either an unsafe fix or actual code judgment. Consults
+[`RULES.md`](../.claude/skills/ruff-cleanup/RULES.md) — a house-rules file mapping specific ruff codes
+to this codebase's fix guidance — and refuses to improvise a fix for a code with no entry: it drafts a
+proposed entry, waits for confirmation, appends it, then applies it. `RULES.md` is seeded with F401,
+F841, E501, and B006 on day one and is expected to grow the same way S_Factory's break-agent checklist
+grew — one confirmed real case at a time, never bulk-authored ahead of an actual encounter. Bounded
+retry (three attempts total) rather than an unbounded loop, consistent with this harness being
+interactive/human-reviewed at every step rather than an autonomous pipeline. Finishes by pointing at
+`wave/SKILL.md`'s existing test-command-detection instruction rather than restating it.
 
 ## `sdk-release` (skill)
 

@@ -87,7 +87,7 @@ The span from one handoff to the next: a new user prompt, or a new subagent task
 back. The [web search cap](01-hooks.md#limit-web-searchpy) resets once per round, so a 10-search budget
 applies per round, not per session.
 
-## Doc-conventions / doc-sweep / sdk-release
+## Doc-conventions / doc-sweep / ruff-cleanup / design-conventions / sdk-release
 
-The three skill/subagent pieces this harness currently ships. See
+Five of the skill/subagent pieces this harness currently ships (alongside `wave`). See
 [`02-skills-and-subagents.md`](02-skills-and-subagents.md) for what each one does.

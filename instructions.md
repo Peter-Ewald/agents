@@ -33,7 +33,7 @@ Non-trivial work is organised into **waves**. A wave is one coherent slice of ch
 
 Every wave runs through fixed phases in order:
 
-1. **Plan** — before any code change, write a detailed plan to the session plan (see your tool's adapter file for exactly where this lives). The plan names every file to touch, every verification step, and the wave's exit criteria. Track the current phase explicitly throughout the work — see your tool's adapter file for the mechanism.
+1. **Plan** — before any code change, write a detailed plan to the session plan (see your tool's adapter file for exactly where this lives). The plan names every file to touch, every verification step, and the wave's exit criteria. Before finalizing the approach, invoke the `design-conventions` skill fresh (see your tool's adapter file's "Skill freshness" note) and check the plan against it. Track the current phase explicitly throughout the work — see your tool's adapter file for the mechanism.
 2. **Implement** — code, config, fixtures, tests.
 3. **Documentation update** — first-class part of the wave, not a follow-up. See *Documentation update phase* below.
 4. **Verification** — run the test suites and any smoke commands listed in the plan. Distinguish failures caused by this wave from pre-existing failures, and call the pre-existing ones out by name when reporting.
@@ -192,5 +192,16 @@ Don't make lines longer than 95 characters. Bullets are grouped by file or folde
 
 Adding a third-party dependency is a decision, not a side effect of implementation. Flag the addition in chat with the reason and an alternatives note before installing it.
 
-Saying **"update documentation"** without further scope invokes the `doc-sweep` subagent for a full
-documentation consistency sweep, rather than touching only what a recent wave changed.
+## Documentation update: choosing the mechanism
+
+Three shapes, chosen by scope — not interchangeable, each exists for a specific reason:
+
+- **Small, user-scoped edit** ("update the README to mention X") — the main agent does it inline,
+  directly. No subagent: the edit is narrow enough that the current conversation's context is enough,
+  and forking or a fresh read would only add overhead.
+- **A wave's own Documentation update phase** — a **forked** agent (inherits the full conversation, so
+  it knows exactly what the wave just built) — see the `wave` skill's Phase 3.
+- **A full consistency sweep** — the bare phrase "update documentation" with no further scope, or an
+  explicit request for a full sweep — invokes the `doc-sweep` subagent, deliberately **fresh** (no
+  inherited context), because it needs to re-derive doc-vs-code accuracy from scratch rather than trust
+  what the conversation currently believes.

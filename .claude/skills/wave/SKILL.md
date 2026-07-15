@@ -28,9 +28,10 @@ Before writing the session plan, read
 that specific detail file. Use it to avoid re-proposing a direction already tried and dropped, and cite it
 in the session plan when relevant ("considered in `docs/history/2026-05-02-...md` — rejected because X").
 Write (or refine) the session plan — see `CLAUDE.md`'s "Session plan location" for where — expanding the
-wave's tasks into concrete steps: exact files to touch, exact verification commands, exit criteria. Stay in
-this phase for as long as discussion continues, revising the plan on feedback. Call `ExitPlanMode` only
-once ready.
+wave's tasks into concrete steps: exact files to touch, exact verification commands, exit criteria. Before
+finalizing, invoke `design-conventions` via the Skill tool (per `CLAUDE.md`'s "Skill freshness" — don't
+work from memory of an earlier read) and check the approach against it. Stay in this phase for as long as
+discussion continues, revising the plan on feedback. Call `ExitPlanMode` only once ready.
 
 If the discussion concludes without proceeding to Implement — the plan is dropped rather than approved —
 archive it anyway, per `CLAUDE.md`'s "Plan history archiving", with outcome `dropped` and the reason given,

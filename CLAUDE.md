@@ -11,6 +11,20 @@ Code-specific mechanics that extend or override it.
 
 Use Claude Code's **TodoWrite tool** to mirror wave phases. Create one todo item per phase (Plan, Implement, Documentation update, Verification, Commit message proposal) and mark each one complete as it finishes — do not batch-update at the end.
 
+## Skill freshness
+
+`doc-conventions` is `paths`-triggered — Claude Code reloads its full content automatically on every
+markdown read/edit, so it's structurally guaranteed fresh. Every other skill (`wave`, `ruff-cleanup`,
+`sdk-release`, `design-conventions`) has no file-glob trigger — it's matched by natural language or
+invoked explicitly — and its content is NOT reinjected across context compaction the way
+`instructions.md`/`CLAUDE.md` are via `reinject-instructions.py`. A memory of having read one of these
+early in a long conversation is not the same as it actually being loaded now.
+
+Don't work from that memory. Invoke the skill via the Skill tool at the moment its specific mechanics
+actually matter — starting a wave's Implement phase, running a cleanup, cutting a release, finalizing a
+design decision — so the exact procedure loads fresh rather than being reconstructed from a fading
+impression of an earlier read.
+
 ## Session plan location
 
 Claude Code's native plan mode already writes the session plan to a durable, per-session file at

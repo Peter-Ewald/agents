@@ -1,3 +1,8 @@
 .vscode/
 .DS_Store
 
+# graphify pilot — third-party installer output, landed here because ~/.claude/skills
+# resolves through this repo's own symlink. Not ours to track either way; remove this
+# line if graphify is dropped, or if we decide to formally adopt and vendor it later.
+.claude/skills/graphify/
+
