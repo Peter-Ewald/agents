@@ -10,7 +10,11 @@ distinguishes a skill from a subagent from a fork.
 Drives a wave from `backlog.md`'s Next Up tier through instructions.md's five phases end-to-end: plan, implement,
 documentation update, verification, commit proposal. Runs inline in the main agent rather than forking
 itself, since Plan and Implement need to actually happen in the calling conversation — only the
-Documentation update phase spins off a fork, for the reason `doc-conventions` below explains. At each
+Documentation update phase spins off a fork, for the reason `doc-sweep` below explains (needs full
+conversation context, unlike `doc-sweep`'s deliberate freshness). Forking requires
+`CLAUDE_CODE_FORK_SUBAGENT=1` — set in `~/.claude/settings.json`'s `env` block; without it,
+`Agent(subagent_type="fork")` fails outright ("Agent type 'fork' not found"), confirmed by direct testing.
+At each
 phase transition it updates `TodoWrite` and overwrites `/tmp/claude-wave-phase-${CLAUDE_SESSION_ID}`, which
 the statusline script reads to show the current phase. That path — not the session's own scratchpad
 directory — is deliberate: the statusline runs as a separate process that only receives a session ID on

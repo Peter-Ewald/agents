@@ -61,7 +61,18 @@ A subagent that inherits the **full conversation transcript** of whatever spawne
 system prompt or model — so it already knows everything discussed or implemented so far. Cheaper than a
 fresh subagent for tasks that need that context, since it reuses the parent's prompt cache. Used for the
 end-of-wave documentation update (needs to know what was just built), not for the ad hoc `doc-sweep`
-(deliberately wants a fresh, no-context read of the repo instead).
+(deliberately wants a fresh, no-context read of the repo instead). Requires
+`CLAUDE_CODE_FORK_SUBAGENT=1` — set in `~/.claude/settings.json`'s `env` block (see [`CLAUDE.md`](../CLAUDE.md)) —
+without it, spawning a fork fails outright rather than falling back gracefully.
+
+## Skill freshness
+
+The rule that a skill without a `paths:` trigger (anything matched by natural language or invoked
+explicitly, rather than auto-loaded on a file pattern) must be invoked via the Skill tool at the moment
+its content is actually needed, not recalled from a memory of having read it earlier in the conversation.
+Skill content isn't reinjected across context compaction the way `instructions.md`/`CLAUDE.md` are — a
+skill read once early in a long session can silently drift from what's actually specified. See
+[`CLAUDE.md`](../CLAUDE.md)'s "Skill freshness" section.
 
 ## Hook
 

@@ -53,3 +53,18 @@ have their own working style and their own `CLAUDE.md` preferences. Two things f
 Both `Chapter_Repos` and `ramgpt-next` avoided this because their `CLAUDE.md` files were created fresh in
 this repo's own session and never committed — gitignoring them before the first commit meant there was
 nothing to untangle.
+
+## Gotcha 3: a third-party skill installer writes through the symlink too
+
+`~/.claude/skills` being a real symlink (not just "Claude Code treats it specially") cuts both ways. When
+a third-party tool's own installer (e.g. Graphify's `graphify install`) writes to
+`~/.claude/skills/<name>/`, it isn't writing to some Claude-Code-managed location — it's writing straight
+through the symlink into this repo's own tracked `.claude/skills/` folder, exactly as if the installer had
+been pointed at this repo directly. The result shows up as an untracked addition in `git status` here,
+not in some separate, invisible location.
+
+This isn't a bug in the installer — it's doing exactly what it's told, writing to the standard user-level
+skills path. The fix is the same one used for any generated output that shouldn't be vendored into a
+source-controlled repo: add the specific path to `.gitignore` (e.g. `.claude/skills/graphify/`) so it
+can't be committed by accident, without needing to know in advance every third-party tool that might ever
+write there.

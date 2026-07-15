@@ -35,6 +35,8 @@ stubs), the import line is added to the top of that file instead of replacing it
 ## Where to go next
 
 - New to this setup? Start with [`docs/00-agents-overview.md`](docs/00-agents-overview.md).
+- What's it actually like to use, and what does it standardize?
+  [`docs/04-working-with-the-harness.md`](docs/04-working-with-the-harness.md).
 - Looking up a specific term? [`docs/glossary.md`](docs/glossary.md).
 - Want to know what a specific hook or skill does? [`docs/01-hooks.md`](docs/01-hooks.md) and
   [`docs/02-skills-and-subagents.md`](docs/02-skills-and-subagents.md).
