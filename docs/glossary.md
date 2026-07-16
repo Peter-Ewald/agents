@@ -35,9 +35,10 @@ tried X, then Y" timelines leak into the docs themselves. See
 A Claude Code permission mode that blocks `Edit`/`Write` calls at the harness level — not by convention,
 by an actual permission boundary — until the user approves exiting it. Entered via `EnterPlanMode`, exited
 via `ExitPlanMode`; exiting always surfaces an approval prompt, with "keep planning with feedback" as a
-standing option alongside approving, so a plan can be discussed and revised indefinitely before anything
-is implemented. This harness enters/exits it automatically on natural-language cues ("let's plan X" /
-"let's implement X") rather than requiring a manual UI toggle — see
+standing option alongside approving, so a concrete plan can be revised before anything is implemented,
+once discussion has already converged in normal mode. General discussion, research, and backlog curation
+happen in normal mode, not here — this harness enters plan mode specifically on an explicit signal to lock
+in a concrete approach ("let's plan X" / "let's start wave N"), not on every discussion cue — see
 [`00-agents-overview.md`](00-agents-overview.md).
 
 ## Skill

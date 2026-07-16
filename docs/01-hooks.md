@@ -10,16 +10,32 @@ stdin — the examples below do exactly that.
 
 ## `reinject-instructions.py`
 
-**Event:** `PreCompact`, and `SessionStart` (matcher: `compact`).
+**Events:** `PreCompact`, `SessionStart` (matcher: `compact`), and `PostToolUse` (matcher: `Edit|Write`,
+filtered internally to `CLAUDE.md`/`instructions.md` only).
 
 Concatenates `~/Projects/agents/CLAUDE.md` and `instructions.md` and returns them as
-`hookSpecificOutput.additionalContext`, re-injecting the full instructions after a compaction event. This
-exists because it's undocumented whether Claude Code's own automatic post-compaction re-injection of a
-project's root `CLAUDE.md` re-resolves an `@instructions.md` import or just replays the literal line —
-this hook makes that question irrelevant by re-injecting the resolved content explicitly either way.
+`hookSpecificOutput.additionalContext` (or `systemMessage` for `PreCompact`, which doesn't support
+`hookSpecificOutput`), re-injecting the full instructions in two situations: around a compaction event
+(the original reason this hook exists — it's undocumented whether Claude Code's own automatic
+post-compaction re-injection of a project's root `CLAUDE.md` re-resolves an `@instructions.md` import or
+just replays the literal line, so this hook makes that question irrelevant either way), and right after
+`CLAUDE.md` or `instructions.md` is edited directly. The second case exists because these two files are
+"always loaded" via the `@import` chain but never automatically re-read mid-session after a direct edit —
+unlike a skill (fixed by "Skill freshness": invoke fresh via the Skill tool), there's no equivalent
+re-invoke mechanism for the core convention files themselves. The `PostToolUse` branch checks
+`event.tool_input.file_path` against both files' resolved absolute paths and silently no-ops for every
+other file, in any repo.
 
 ```sh
 echo '{"hook_event_name": "SessionStart"}' | ../.claude/hooks/reinject-instructions.py
+
+# PostToolUse on the watched files — emits additionalContext
+echo '{"hook_event_name": "PostToolUse", "tool_name": "Edit", "tool_input": {"file_path": "/Users/peter/Projects/agents/instructions.md"}}' \
+  | ../.claude/hooks/reinject-instructions.py
+
+# PostToolUse on anything else — silent no-op
+echo '{"hook_event_name": "PostToolUse", "tool_name": "Edit", "tool_input": {"file_path": "/tmp/unrelated.py"}}' \
+  | ../.claude/hooks/reinject-instructions.py; echo "exit: $?"
 ```
 
 ## `lint-changed-lines.py`

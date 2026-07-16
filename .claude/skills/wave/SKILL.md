@@ -18,7 +18,9 @@ At every phase transition:
 
 ## 1. Plan
 
-Call `EnterPlanMode`. Read `backlog.md` and locate the target wave in its Next Up tier. If `$ARGUMENTS`
+Once ready to lock in a concrete plan for this wave — backlog curation and any design discussion having
+already happened in normal mode — call `EnterPlanMode`. Read `backlog.md` and locate the target wave in
+its Next Up tier. If `$ARGUMENTS`
 (or the discussion) instead names something sitting in Planned or Later Considerations, treat that as a
 promotion: move it into Next Up as part of this phase — rewritten to fit that tier's tone, per
 `instructions.md`'s "Backlog tiers" — before planning it like any other wave.

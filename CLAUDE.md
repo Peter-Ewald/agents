@@ -47,9 +47,11 @@ Draft the full wave commit message in chat first. Pass it via `-m "…"` directl
 
 ## Chat vs. file updates
 
-File changes are gated by plan mode (see `instructions.md`, Working Mode), not by a separate verbal
-go-ahead: stay in plan mode while discussing, and only touch files after exiting it — either through plan
-mode's own approval prompt, or for changes small enough that plan mode was skipped entirely.
+File changes are gated by plan mode's approval (see `instructions.md`, Working Mode) once a concrete plan
+is being finalized — not by a separate verbal go-ahead. Discussion, research, and backlog curation happen
+in normal mode and don't need this gate at all. Once a topic reaches the point of finalizing a concrete
+plan, only touch files after exiting plan mode — either through plan mode's own approval prompt, or for
+changes small enough that plan mode was skipped entirely.
 
 This still applies per topic: in a single conversation some topics may already be past approval while
 others are still being discussed. Only touch files for topics that have actually cleared plan mode.
