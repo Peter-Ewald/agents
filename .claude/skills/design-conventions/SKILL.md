@@ -30,12 +30,6 @@ When a failure is handled, it's surfaced — logged, re-raised, or reported — 
 `pass` or a `|| true`-style silence that hides the next real bug. A caught exception that does nothing
 is indistinguishable from a bug nobody noticed yet.
 
-## Consistency over cleverness
-
-Match the codebase's existing pattern for a given kind of problem unless that pattern is demonstrably
-wrong. A novel approach needs a stated reason — "this pattern doesn't handle X" — not just a preference
-for a different style.
-
 ## Interfaces expose the minimum contract
 
 A function, class, or API surface should commit to no more than callers actually need. Don't leak

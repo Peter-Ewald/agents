@@ -15,8 +15,8 @@ Use Claude Code's **TodoWrite tool** to mirror wave phases. Create one todo item
 
 `doc-conventions` is `paths`-triggered — Claude Code reloads its full content automatically on every
 markdown read/edit, so it's structurally guaranteed fresh. Every other skill (`wave`, `ruff-cleanup`,
-`sdk-release`, `design-conventions`) has no file-glob trigger — it's matched by natural language or
-invoked explicitly — and its content is NOT reinjected across context compaction the way
+`sdk-release`, `design-conventions`, `langfuse-upgrade`) has no file-glob trigger — it's matched by
+natural language or invoked explicitly — and its content is NOT reinjected across context compaction the way
 `instructions.md`/`CLAUDE.md` are via `reinject-instructions.py`. A memory of having read one of these
 early in a long conversation is not the same as it actually being loaded now.
 

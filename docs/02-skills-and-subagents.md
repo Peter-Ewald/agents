@@ -1,6 +1,6 @@
 # Skills and subagents
 
-Six pieces so far, each chosen for a different reason — see [glossary.md](glossary.md) for what
+Seven pieces so far, each chosen for a different reason — see [glossary.md](glossary.md) for what
 distinguishes a skill from a subagent from a fork.
 
 ## `wave` (skill)
@@ -119,3 +119,30 @@ flags (`uv publish --index ramtech-pypi dist/<package>-<version>*`) are exactly 
 easy to mistype once and shouldn't depend on being remembered correctly. After a successful release it
 also checks other repos in the workspace for stale version pins and reports them — it doesn't bump those
 repos automatically.
+
+## `langfuse-upgrade` (skill)
+
+[`../.claude/skills/langfuse-upgrade/SKILL.md`](../.claude/skills/langfuse-upgrade/SKILL.md)
+
+Triggered by pasting a langfuse changelog/release notes, mentioning a new langfuse version, or asking to
+check/upgrade the langfuse dependency — both `semantic_tracing` and `semantic_evaluation` wrap the
+`langfuse` Python SDK directly, and it has a track record of removing REST client methods inside otherwise
+normal minor releases, so a new release is worth checking deliberately rather than just bumping the
+version constraint.
+
+Investigates via a **forked** agent with `isolation: "worktree"` — a fork rather than a fresh subagent
+because it needs the session's existing understanding of both SDKs without re-explaining the repo, and a
+worktree because it bumps a dependency and runs real installs/tests, which must never touch the actual
+working directory or its uncommitted changes. The fork reads the real changelog, temporarily pins the
+target version in both packages, runs both test suites, greps for every langfuse surface each package
+actually uses, and returns per-package findings: what broke, why, a proposed fix, and a SemVer
+classification (patch if the fix stays internal, major if it forces a public-API change) per
+`instructions.md`'s published-package policy.
+
+Nothing is applied from the worktree — the main conversation presents the findings and versioning
+consequence in chat and waits for explicit agreement (mirroring a wave's Plan-phase gate) before applying
+anything for real in the actual checkout. Ends by writing each affected package's `CHANGELOG.md` entry
+under the agreed next version — the exact entry `sdk-release` (above) checks for — and drafting a commit
+message, but deliberately stops short of bumping `pyproject.toml`'s version number or publishing: that
+handoff to `sdk-release` is intentional, since `sdk-release` already expects the changelog entry this skill
+just wrote.

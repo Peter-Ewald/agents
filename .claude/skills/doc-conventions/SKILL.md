@@ -119,3 +119,7 @@ Recommended inline definition box pattern:
 	    set of colors rather than an arbitrary per-document choice.
 	11. Keep node labels short — a few words or a function signature. Use surrounding prose for
 	    explanation rather than long sentences inside boxes.
+
+## Style and Tone
+
+- don't use "-" or "—" characters generally. In headings use alternatives, for example ":". In paragraphs, build shorter sentences instead of using dashes, or use commas, colons, or semicolons to separate clauses instead.
