@@ -26,6 +26,8 @@ rm -rf "$PKG_DIR/dist"
   cd "$PKG_DIR"
   uv sync
   uv build
+  # hatch_build.py stages the docs into the wheel; refuse to publish one without them.
+  uv run pytest -q -m slow tests/test_packaged_docs.py
   uv publish --index ramtech-pypi "dist/${PACKAGE}-${VERSION}"*
 )
 
