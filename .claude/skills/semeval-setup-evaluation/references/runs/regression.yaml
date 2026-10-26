@@ -1,0 +1,12 @@
+# yaml-language-server: $schema=run_file.schema.json
+#
+# The regression run: every scope, every catalogue metric. Datasets and metrics come
+# from ../evaluation_manifest.yaml; this file names only what the run changes.
+
+name: <product>_regression
+description: Every behaviour the coverage map lists, scored on every metric.
+predictor_adapter: evaluation.predictor:AgentPredictor
+scopes: [end_to_end]
+gate:
+  mode: all_metrics
+  minimum_item_count: 1

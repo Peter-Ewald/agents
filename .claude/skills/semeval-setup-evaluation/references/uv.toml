@@ -1,0 +1,11 @@
+# semantic-evaluation pins Microsoft Agent Framework betas, and uv takes a pre-release
+# of a dependency only where this allows it. It must come before the first [[index]]
+# table: below it, TOML reads it as part of that table and uv ignores it.
+prerelease = "allow"
+
+# Ramboll's own packages, semantic-evaluation and semantic-tracing among them, are on
+# the internal Artifactory index. It is an extra index, so every other package still
+# comes from the project's default. uv reads the token from ~/.netrc; never put it here.
+[[index]]
+name = "ramtech-pypi-internal"
+url = "https://artifactory.ramboll.com/artifactory/api/pypi/ramtech-pypi-internal/simple"

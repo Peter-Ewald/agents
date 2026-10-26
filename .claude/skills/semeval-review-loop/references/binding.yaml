@@ -1,0 +1,50 @@
+# One review binding: which annotation queue is promoted into which dataset, and how a
+# reviewed item becomes a dataset item. Register it with
+#   uv run eval-review register-binding evaluation/review/<scope>.binding.yaml
+# Every field: `uv run eval-docs show evaluation/06-review-sync`.
+
+binding_id: <product>-<scope>
+description: Promote reviewed <scope> turns into the <scope> dev dataset.
+queue_id: <the queue's id, not an item's>
+langfuse_profile_id: <product>          # registered with eval-review register-profile
+dataset_scope: <scope>
+product_id: <product>
+dataset_version: dev
+created_by: <team or person>
+
+review_policy:
+  # The score config names reviewers give, exactly as in Langfuse.
+  required_score_names: [<Score one>, <Score two>]
+  # A score at or below this needs a corrected output; the default is 3.0.
+  # low_score_correction_threshold: 3.0
+
+dataset_target:
+  name: <the scope's dev dataset, from dataset_sync.scope_to_dataset>
+  description: <what the dataset holds>
+  input_schema:
+    type: object
+    required: [message]
+    properties:
+      message: {type: string}
+  expected_output_schema:
+    type: object
+    required: [<field>]
+    properties:
+      <field>: {type: string}
+
+# Paths into a reviewed queue item: original_input.*, original_output.*, and
+# selected_output.* (the corrected output where the reviewer wrote one).
+input_projection:
+  fields:
+    - dataset_field: message
+      selectors:
+        - {queue_item_path: original_input.message, coerce: string}
+
+expected_output_projection:
+  fields:
+    - dataset_field: <field>
+      selectors:
+        - {queue_item_path: selected_output.<field>}
+
+queue_cleanup:
+  enabled: false        # keep reviewed items in the queue while the binding is new

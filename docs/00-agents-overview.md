@@ -68,7 +68,7 @@ whether or not `wave` is the thing that triggered the edit it's checking.
 - [`01-hooks.md`](01-hooks.md) — every hook, what event triggers it, what it checks, and how to test it
   standalone.
 - [`02-skills-and-subagents.md`](02-skills-and-subagents.md) — `wave`, `doc-conventions`, `doc-sweep`,
-  `design-conventions`, `ruff-cleanup`, `sdk-release`.
+  `design-conventions`, `ruff-cleanup`, `sdk-release`, `langfuse-upgrade`, the `semeval-*` skills.
 - [`03-cross-repo-distribution.md`](03-cross-repo-distribution.md) — how the symlink setup works, and the
   gotchas it ran into.
 - [`04-working-with-the-harness.md`](04-working-with-the-harness.md) — the experience of using this day

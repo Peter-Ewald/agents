@@ -2,5 +2,6 @@
 
 Skills shared across repos via the `~/.claude/skills` symlink to this folder (confirmed working — Claude
 Code does honor a user-level skills directory, even though it isn't documented). Currently `wave`,
-`doc-conventions`, `ruff-cleanup`, `design-conventions`, `sdk-release`, and `langfuse-upgrade` — see
+`doc-conventions`, `ruff-cleanup`, `design-conventions`, `sdk-release`, and `langfuse-upgrade`, plus the nine
+`semeval-*` skills for offline evaluation and tracing of LLM agents — see
 [`../../docs/02-skills-and-subagents.md`](../../docs/02-skills-and-subagents.md) for what each does.

@@ -1,0 +1,32 @@
+# yaml-language-server: $schema=evaluation_manifest.schema.json
+#
+# This project's evaluation, declared once: every metric with the scopes it scores,
+# the dataset of each scope, and the baselines promote-baseline writes. Each run
+# under runs/ names its scopes and inherits the rest from here.
+#   uv run eval-dataset resolve-run --run-file evaluation/runs/regression.yaml \
+#     --manifest evaluation/evaluation_manifest.yaml
+# prints what a run will execute.
+
+evaluators:
+  # The agent's path: deterministic, no model call. The live list of evaluators
+  # and the parameters each accepts is GET {scoring service}/evaluators.
+  calls_the_expected_tool:
+    framework: builtin_deterministic
+    evaluator: ToolCallMatch
+    threshold: 5.0
+    evaluator_params:
+      tool_name: <tool the agent must call>
+      arg_name: <its argument to compare>
+      expected_field: <expected_output key holding the expected values, a list>
+      empty_means_not_called: true    # an empty list means "must not call it"
+    scopes: [end_to_end]
+  # What the agent says is judged by an LLM, which needs a connection profile on
+  # the scoring service (`uv run eval-docs show connection-profiles`). Add it
+  # once one is registered.
+dataset_sync:
+  scope_to_dataset:
+    end_to_end: <product>_agent_end_to_end_dev
+  scoped_dir: datasets/incoming
+  archive_dir: datasets/archive
+  create_on_missing: true    # the first push only; set to false once the dataset exists
+baselines: {}

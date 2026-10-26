@@ -1,0 +1,21 @@
+# yaml-language-server: $schema=run_file.schema.json
+#
+# One experiment: the configurations go on the command line, one run each, e.g.
+#   uv run python -m evaluation.run --run-file evaluation/runs/<experiment>.yaml \
+#     --run-label <label> --config reasoning_effort=low
+# The record of what it asked and found is evaluation/experiments/<date>-<experiment>.md.
+
+name: <product>_<experiment>
+description: <the question this experiment answers>
+predictor_adapter: evaluation.predictor:AgentPredictor
+scopes: [end_to_end]
+repeats: 3
+trace_metrics: [wall_time_s, input_tokens, output_tokens, cost_usd, tool_calls]
+score_publication:
+  aggregates_on: last_repeat
+  spread_statistics: [median, stdev]
+  informative_spread_only: true
+  trace_metric_item_scores: false
+gate:
+  mode: all_metrics
+  minimum_item_count: 1

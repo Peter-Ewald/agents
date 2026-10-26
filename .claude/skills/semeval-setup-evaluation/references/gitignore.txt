@@ -1,0 +1,7 @@
+# Evaluation: Langfuse holds the datasets. Of evaluation/datasets/ only archive/ (one
+# snapshot per release) is committed; working copies are deleted after their push.
+evaluation/datasets/incoming/
+evaluation/datasets/*.json
+evaluation/outputs/
+.env
+.env.local

@@ -65,3 +65,10 @@ skills. A new skill added here needs its own link:
 ```sh
 ln -s ~/Projects/agents/.claude/skills/<name> ~/.claude/skills/<name>
 ```
+
+On Windows `ln -s` needs an elevated shell, and without one Git Bash silently copies the folder, which then
+drifts from the repo. Without elevation use a directory junction instead, which Claude Code follows the same:
+
+```bat
+mklink /J %USERPROFILE%\.claude\skills\<name> %USERPROFILE%\Projectsgents\.claude\skills\<name>
+```

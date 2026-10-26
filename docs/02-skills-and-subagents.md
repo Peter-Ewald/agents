@@ -1,6 +1,6 @@
 # Skills and subagents
 
-Eight pieces so far, each chosen for a different reason — see [glossary.md](glossary.md) for what
+Several pieces, each chosen for a different reason — see [glossary.md](glossary.md) for what
 distinguishes a skill from a subagent from a fork.
 
 ## `wave` (skill)
@@ -159,3 +159,26 @@ under the agreed next version — the exact entry `sdk-release` (above) checks f
 message, but deliberately stops short of bumping `pyproject.toml`'s version number or publishing: that
 handoff to `sdk-release` is intentional, since `sdk-release` already expects the changelog entry this skill
 just wrote.
+
+
+## `semeval-*` (nine skills)
+
+[`../.claude/skills/`](../.claude/skills/README.md): `semeval-setup-evaluation`, `semeval-setup-tracing`,
+`semeval-maintain`, `semeval-datasets`, `semeval-metrics`, `semeval-experiment`, `semeval-review-loop`,
+`semeval-model-pricing`, `semeval-guide`.
+
+Installed from the semantic-evaluation project's agent skills. They set up and run offline evaluation and
+Langfuse tracing for an LLM agent with the `semantic_evaluation` and `semantic_tracing` SDKs. They are
+shared here because every repo that builds an agent needs them, not only the one that first installed them.
+Each skill is self-contained: its `references/` folder holds the templates it copies into a project
+(manifest, run files, CI snippet, rules).
+
+What stays in the consuming repo is the **always-on rule**, not the skills. `semeval-setup-evaluation`
+writes a short rule into the project (`.claude/rules/evaluation.md` and/or a `CLAUDE.md` section) saying
+that a change to the agent's behaviour is not done until its evaluation impact is checked, via the
+`semeval-maintain` skill. That rule is project-specific, because it points at the project's
+`evaluation/coverage.md`. Without it the skills still work, but nothing asks for them when the agent changes.
+Re-run `semeval-setup-evaluation` for the rule in a new repo.
+
+`semeval-maintain` is the one that matters day to day. The others run when evaluation is set up, a dataset
+is released, metrics change or an experiment compares configurations.
