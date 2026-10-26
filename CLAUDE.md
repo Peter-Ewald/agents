@@ -7,6 +7,13 @@ Code-specific mechanics that extend or override it.
 
 ---
 
+## Adding a skill, subagent, or hook
+
+This repo's content doesn't reach other repos by itself — see `docs/03-cross-repo-distribution.md` for
+the mechanism and its gotchas. A new skill needs its own symlink into `~/.claude/skills/`; subagents and
+hooks are already covered by the existing `~/.claude/agents` symlink and global `~/.claude/settings.json`
+registration, so only skills need this per-addition step.
+
 ## Phase tracking
 
 The `wave` skill writes the current phase to a file the statusline shows; see that skill for the
@@ -17,7 +24,12 @@ mechanism. There is no separate todo list to keep in step.
 Every tool call re-sends the whole conversation, so cost grows with context size times call count.
 
 - **Locate before reading.** Grep or Glob for the symbol first, then read the relevant line range of a
-  large file rather than the whole file.
+  large file rather than the whole file. The same applies to commands and API calls: prefer a filtered or
+  quiet form (`pytest -q`, `git log --oneline`, a `jq` filter on JSON) over raw verbose output; for
+  anything fetched over HTTP (a Langfuse trace, an API response), write it to a scratch file first and
+  filter before reading, rather than letting the raw payload enter context. Delegate a payload you must
+  read in full (a large diff, a trace with no obvious filter) to a subagent so the raw data lives in its
+  context, not this one's.
 - **Delegate execution, keep judgment.** Scoped implementation goes to the `implementer` subagent (see the
   `wave` skill); open-ended searches go to `Explore` or a `general-purpose` agent, which run on Sonnet by
   default (`CLAUDE_CODE_SUBAGENT_MODEL`). Forks inherit this conversation and its model, so use one only
