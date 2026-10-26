@@ -7,6 +7,6 @@ for how these pieces fit together, and [`../backlog.md`](../backlog.md) for what
 | Path | Purpose | Distributed via |
 |---|---|---|
 | [`agents/`](agents/README.md) | Subagent definitions | symlinked from `~/.claude/agents` |
-| [`skills/`](skills/README.md) | Skills | symlinked from `~/.claude/skills` |
+| [`skills/`](skills/README.md) | Skills | each skill symlinked into `~/.claude/skills/` |
 | [`hooks/`](hooks/README.md) | Hook scripts | referenced by absolute path from `~/.claude/settings.json` |
 | [`statusline.py`](statusline.py) | Shows the current wave phase | referenced under `statusLine` in `~/.claude/settings.json` |

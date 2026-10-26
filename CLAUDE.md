@@ -9,7 +9,21 @@ Code-specific mechanics that extend or override it.
 
 ## Phase tracking
 
-Use Claude Code's **TodoWrite tool** to mirror wave phases. Create one todo item per phase (Plan, Implement, Documentation update, Verification, Commit message proposal) and mark each one complete as it finishes — do not batch-update at the end.
+The `wave` skill writes the current phase to a file the statusline shows; see that skill for the
+mechanism. There is no separate todo list to keep in step.
+
+## Token economy
+
+Every tool call re-sends the whole conversation, so cost grows with context size times call count.
+
+- **Locate before reading.** Grep or Glob for the symbol first, then read the relevant line range of a
+  large file rather than the whole file.
+- **Delegate execution, keep judgment.** Scoped implementation goes to the `implementer` subagent (see the
+  `wave` skill); open-ended searches go to `Explore` or a `general-purpose` agent, which run on Sonnet by
+  default (`CLAUDE_CODE_SUBAGENT_MODEL`). Forks inherit this conversation and its model, so use one only
+  when the full context is the point.
+- **One session per piece of work.** After a wave commits, or when switching topic, suggest `/clear`:
+  `backlog.md`, `docs/history/`, and the code carry everything across sessions.
 
 ## Skill freshness
 

@@ -1,6 +1,6 @@
 # Skills and subagents
 
-Seven pieces so far, each chosen for a different reason — see [glossary.md](glossary.md) for what
+Eight pieces so far, each chosen for a different reason — see [glossary.md](glossary.md) for what
 distinguishes a skill from a subagent from a fork.
 
 ## `wave` (skill)
@@ -8,14 +8,14 @@ distinguishes a skill from a subagent from a fork.
 [`../.claude/skills/wave/SKILL.md`](../.claude/skills/wave/SKILL.md)
 
 Drives a wave from `backlog.md`'s Next Up tier through instructions.md's five phases end-to-end: plan, implement,
-documentation update, verification, commit proposal. Runs inline in the main agent rather than forking
-itself, since Plan and Implement need to actually happen in the calling conversation — only the
-Documentation update phase spins off a fork, for the reason `doc-sweep` below explains (needs full
+documentation update, verification, commit proposal. The main agent keeps the judgment — plan, contracts
+between sub-tasks, review, verification, backlog and history, commit — and hands each scoped sub-task in
+the plan's sub-task table to the `implementer` subagent below. Only a documentation sweep the backlog
+assigns to that specific wave spins off a fork, for the reason `doc-sweep` below explains (needs full
 conversation context, unlike `doc-sweep`'s deliberate freshness). Forking requires
 `CLAUDE_CODE_FORK_SUBAGENT=1` — set in `~/.claude/settings.json`'s `env` block; without it,
 `Agent(subagent_type="fork")` fails outright ("Agent type 'fork' not found"), confirmed by direct testing.
-At each
-phase transition it updates `TodoWrite` and overwrites `/tmp/claude-wave-phase-${CLAUDE_SESSION_ID}`, which
+At each phase transition it overwrites `/tmp/claude-wave-phase-${CLAUDE_SESSION_ID}`, which
 the statusline script reads to show the current phase. That path — not the session's own scratchpad
 directory — is deliberate: the statusline runs as a separate process that only receives a session ID on
 its own stdin, not this session's scratchpad path, so the hand-off point has to be something derivable
@@ -38,6 +38,19 @@ used to live as always-on prose in `instructions.md`. Moving it into a path-scop
 enters context when a markdown edit is actually happening, instead of competing for attention the entire
 session regardless of whether any docs are being touched — and it's the single definition both `doc-sweep`
 (below) and the eventual `/wave` documentation phase apply, rather than two competing copies.
+
+## `implementer` (subagent)
+
+[`../.claude/agents/implementer.md`](../.claude/agents/implementer.md)
+
+Carries out one sub-task from an approved wave plan: the files it owns, the contract the plan fixed, and
+the acceptance check that proves it. Runs on Sonnet at medium effort with a fresh context, so the many
+edit-and-test calls of implementation re-read a small context on a cheaper model instead of the main
+agent's full conversation on Opus — the context size is the larger part of that saving. It never plans or
+widens its scope: an ambiguous contract or a needed file outside its brief is a `blocked` report, which
+sends the decision back to the main agent. The report has a fixed five-line shape with no diffs, because
+the main agent reviews the diff itself and every line of report stays in its context for the rest of the
+wave. No `Agent` tool, so it cannot delegate further.
 
 ## `doc-sweep` (subagent)
 

@@ -33,9 +33,9 @@ Non-trivial work is organised into **waves**. A wave is one coherent slice of ch
 
 Every wave runs through fixed phases in order:
 
-1. **Plan** — before any code change, write a detailed plan to the session plan (see your tool's adapter file for exactly where this lives). The plan names every file to touch, every verification step, and the wave's exit criteria. Before finalizing the approach, invoke the `design-conventions` skill fresh (see your tool's adapter file's "Skill freshness" note) and check the plan against it. Track the current phase explicitly throughout the work — see your tool's adapter file for the mechanism.
+1. **Plan** — before any code change, write a detailed plan to the session plan (see your tool's adapter file for exactly where this lives). The plan names every file to touch, every verification step, and the wave's exit criteria, and splits the work into sub-tasks, each with the files it owns and the check that proves it done. Before finalizing the approach, invoke the `design-conventions` skill fresh (see your tool's adapter file's "Skill freshness" note) and check the plan against it. Track the current phase explicitly throughout the work — see your tool's adapter file for the mechanism.
 2. **Implement** — code, config, fixtures, tests.
-3. **Documentation update** — first-class part of the wave, not a follow-up. See *Documentation update phase* below.
+3. **Documentation upkeep** — first-class part of the wave, not a follow-up, but scoped to what the wave actually changed rather than to `docs/` as a whole. See *Documentation update phase* below.
 4. **Verification** — run the test suites and any smoke commands listed in the plan. Distinguish failures caused by this wave from pre-existing failures, and call the pre-existing ones out by name when reporting.
 5. **Commit message proposal** — for a larger landing (e.g. all of Wave 2, not just sub-wave 2.1) automatically draft a commit message at the end. See *Commit messages* below.
 
@@ -63,6 +63,8 @@ The backlog is strictly forward-looking:
 - The Next Up tier's ordering table is renumbered after every removal so step numbers are dense.
 
 Read this way, the backlog always answers one question: *what is left to do?* `docs/history/` (below) answers the complementary question: *what was already tried, and why did it end up this way?*
+
+**Write entries with enough detail to stand alone.** When a wave or topic is added — freshly from discussion, or promoted from another tier — capture the reasoning behind it in the entry itself: the motivation, constraints, and dependencies developed in conversation, not a compressed title. A `/compact` or a fresh session has only the backlog to reconstruct the idea from; anything that stayed in chat and never made it into the entry is gone. This applies even to a Next Up row — pair it with enough surrounding detail that the entry alone, with no conversation context, explains why it's worth doing and what shape it should take.
 
 ### Backlog tiers
 
@@ -137,17 +139,20 @@ still describes this release's change, not a replay of earlier rejected approach
 
 ## Documentation update phase
 
-Every wave finishes with a documentation pass. Not optional, not a follow-up task — part of the wave's definition of done. All rewrites follow the `doc-conventions` skill (terminology, glossary placement, markdown/mermaid rules, and the native rewrite check).
+Every wave finishes with documentation upkeep. Not optional, not a follow-up task — part of the wave's definition of done. All rewrites follow the `doc-conventions` skill (terminology, glossary placement, markdown/mermaid rules, and the native rewrite check).
 
-The pass covers:
+**Upkeep is scoped to what this wave made wrong.** It always covers:
 
 - **README files** in every folder the wave touched, rewritten so they read as if the new shape was the original shape.
-- **`docs/*.md`** files whose subject the wave changed, rewritten the same way. Never append "as of wave N…" paragraphs.
-- **`docs/glossary.md`** in each affected scope — add new terms, remove retired ones, update definitions that drifted.
+- **Individual claims in `docs/*.md`** that this wave falsified — the specific statements, not the documents around them. Never append "as of wave N…" paragraphs.
 - **`backlog.md`** — remove the completed wave's section entirely. If the wave revealed something that conflicts with or changes the shape of other pending waves, also update *those* sections so the backlog stays accurate. If the right update is unclear or large, raise it in chat after the wave instead of guessing.
 - **`docs/history/`** — archive this wave's session plan (see *Plan history* above) and append its line to
   `docs/history/index.md`. A dropped plan is archived earlier, in the Plan phase, not here — see *Plan
   history* for why.
+
+**A full sweep of `docs/` is not part of a wave by default** — re-deriving every document per wave is expensive, and while a planned sequence is still in progress it rewrites transitional descriptions into successively less wrong states instead of once, correctly, at the end. A sweep covers what upkeep does not: `docs/*.md` read as wholes rather than claim by claim, and `docs/glossary.md` in each affected scope — new terms added, retired ones removed, drifted definitions corrected.
+
+**`backlog.md` decides when a sweep happens, and overrides this default.** A repo may sequence documentation as **its own wave**, or name a sweep inside **one wave's own definition**; either way only that wave runs it, and it is the one place a fork is warranted (see *choosing the mechanism* below). Where the backlog says nothing, do the upkeep, then say in chat that no sweep was run and what one would still owe.
 - **`CHANGELOG.md`** if the wave ships a released package — one entry under the new version, written for future users of the package, not for me. Check `docs/history/index.md` for the plan(s) behind this release and ground the narrative paragraph in the documented intent rather than re-deriving it from the diff alone. Use this structure:
 
   ```markdown
@@ -199,8 +204,11 @@ Three shapes, chosen by scope — not interchangeable, each exists for a specifi
 - **Small, user-scoped edit** ("update the README to mention X") — the main agent does it inline,
   directly. No subagent: the edit is narrow enough that the current conversation's context is enough,
   and forking or a fresh read would only add overhead.
-- **A wave's own Documentation update phase** — a **forked** agent (inherits the full conversation, so
-  it knows exactly what the wave just built) — see the `wave` skill's Phase 3.
+- **A wave's routine documentation upkeep** — the main agent does it inline. This is the default for every
+  wave: the scope is what that wave changed, and the conversation already holds it.
+- **The documentation sweep a backlog assigns to one specific wave** — a **forked** agent (inherits the
+  full conversation, so it knows exactly what the preceding waves built) — see the `wave` skill's Phase 3.
+  Only for the wave the backlog names, never for every wave.
 - **A full consistency sweep** — the bare phrase "update documentation" with no further scope, or an
   explicit request for a full sweep — invokes the `doc-sweep` subagent, deliberately **fresh** (no
   inherited context), because it needs to re-derive doc-vs-code accuracy from scratch rather than trust

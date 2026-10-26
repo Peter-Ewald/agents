@@ -8,9 +8,9 @@ them, and the two real gotchas this ran into.
 | Kind | Distributed via | Why this works |
 |---|---|---|
 | Subagents | `~/.claude/agents` symlinked once to [`../.claude/agents/`](../.claude/agents/README.md) | Documented, user-level location — applies to every repo automatically. |
-| Skills | `~/.claude/skills` symlinked once to [`../.claude/skills/`](../.claude/skills/README.md) | Undocumented, but empirically confirmed working the same way as agents — verified by placing a throwaway probe skill and starting a fresh session in an unrelated repo. |
+| Skills | Each skill folder in [`../.claude/skills/`](../.claude/skills/README.md) symlinked individually into `~/.claude/skills/` | Documented: a `<skill-name>` entry in the personal skills location may be a symlink to a directory elsewhere. `~/.claude/skills/` itself stays a real directory, see Gotcha 3. |
 | Hooks | Registered once in `~/.claude/settings.json` (global) | Hooks were never per-repo to begin with — global settings already apply everywhere, so there's nothing to symlink. |
-| Shared conventions (`CLAUDE.md`, `instructions.md`) | A one-line `@~/Projects/agents/CLAUDE.md` import in each repo's own root `CLAUDE.md` | Claude Code resolves `@`-imports at session start, so the repo behaves as if the shared file were pasted in, without it actually being copied. |
+| Shared conventions (`CLAUDE.md`, `instructions.md`) | A one-line `@~/Projects/agents/CLAUDE.md` import — in the repo's root `CLAUDE.md` for a personal repo, in `CLAUDE.local.md` for a shared one | Claude Code resolves `@`-imports at session start, so the repo behaves as if the shared file were pasted in, without it actually being copied. |
 
 Skills briefly went through an intermediate step — a `.claude/skills` symlink in each individual repo,
 before user-level `~/.claude/skills` was confirmed to work — which is why some repos' `.gitignore` still
@@ -34,37 +34,34 @@ Each subdirectory still gets its own `CLAUDE.md` stub, though — Claude Code se
 subdirectory in this setup, so each needs the import even though git treats them as one repo. A commit
 touching gitignore rules for any of the three is one commit in `Chapter_Repos`, not three.
 
-## Gotcha 2: a repo shared with colleagues needs CLAUDE.md kept local
+## Gotcha 2: a repo shared with colleagues keeps the import out of git
 
-Repos other than this one aren't all personal — `Project Green`, for instance, has colleagues who each
-have their own working style and their own `CLAUDE.md` preferences. Two things follow from that:
+Repos other than this one aren't all personal — `Project Green` and `Task Force Evaluation`, for instance,
+have colleagues with their own working style and their own `CLAUDE.md`. The import is an absolute path
+specific to this machine, so committing it would be meaningless for anyone else.
 
-- The shared-conventions import (`@~/Projects/agents/CLAUDE.md`) is an absolute path specific to this
-  machine. Committing it would be meaningless for a colleague who doesn't have that exact directory, so
-  every repo that isn't purely personal needs `CLAUDE.md` gitignored, not committed.
-- **Gitignoring a file does not retroactively untrack it.** `Project Green/CLAUDE.md` had already been
-  committed (with real project architecture content, not just Claude Code preferences) before the import
-  line was added — adding `CLAUDE.md` to `.gitignore` stopped *future* edits from being tracked, but the
-  file still showed up in `git status` until it was explicitly removed from the index with
-  `git rm --cached CLAUDE.md`. The local file is untouched by that command; only git's tracking of it
-  stops. Anything in a to-be-untracked file that colleagues should keep receiving needs to move to
-  `README.md` or `docs/` (which stay shared) before the file is untracked, not after.
+The import goes into `CLAUDE.local.md` instead: Claude Code loads it alongside `CLAUDE.md` in the same
+directory, and it is never committed. The repo's committed `CLAUDE.md` stays the team's, untouched.
+`CLAUDE.local.md` must be ignored without touching the team's `.gitignore` — `.git/info/exclude` does
+that per clone (`Chapter_Repos` excludes `**/CLAUDE.local.md` there, which reaches every subdirectory).
 
-Both `Chapter_Repos` and `ramgpt-next` avoided this because their `CLAUDE.md` files were created fresh in
-this repo's own session and never committed — gitignoring them before the first commit meant there was
-nothing to untangle.
+The first session that meets an import from outside the working directory asks once to approve it;
+declining disables the import for that project.
 
-## Gotcha 3: a third-party skill installer writes through the symlink too
+A repo whose committed `.claude/settings.json` enables a plugin this harness replaces — `Task Force
+Evaluation` enables the team plugin `team-ai-layer` — also needs that plugin set to `false` in its
+`.claude/settings.local.json`. A project setting outranks the user one, so disabling it in
+`~/.claude/settings.json` alone leaves it loaded.
 
-`~/.claude/skills` being a real symlink (not just "Claude Code treats it specially") cuts both ways. When
-a third-party tool's own installer (e.g. Graphify's `graphify install`) writes to
-`~/.claude/skills/<name>/`, it isn't writing to some Claude-Code-managed location — it's writing straight
-through the symlink into this repo's own tracked `.claude/skills/` folder, exactly as if the installer had
-been pointed at this repo directly. The result shows up as an untracked addition in `git status` here,
-not in some separate, invisible location.
+## Gotcha 3: `~/.claude/skills/` is not this repo's to own
 
-This isn't a bug in the installer — it's doing exactly what it's told, writing to the standard user-level
-skills path. The fix is the same one used for any generated output that shouldn't be vendored into a
-source-controlled repo: add the specific path to `.gitignore` (e.g. `.claude/skills/graphify/`) so it
-can't be committed by accident, without needing to know in advance every third-party tool that might ever
-write there.
+Claude Code writes into `~/.claude/skills/` itself — skills synced from claude.ai land in its `synced/`
+folder — and third-party installers (e.g. Graphify's `graphify install`) write to
+`~/.claude/skills/<name>/`. With the whole folder symlinked to this repo, all of that would land in this
+repo's tracked `.claude/skills/` and show up in `git status` here. Symlinking each skill individually keeps
+`~/.claude/skills/` a real directory that other writers can use, and keeps this repo holding only its own
+skills. A new skill added here needs its own link:
+
+```sh
+ln -s ~/Projects/agents/.claude/skills/<name> ~/.claude/skills/<name>
+```

@@ -16,21 +16,21 @@ Claude Code follow the same working style everywhere, without copy-pasting instr
 
 ## How a repo picks this up
 
-Every other repo gets a one-line root `CLAUDE.md`:
+A repo picks up the shared conventions through one import line:
 
 ```
 @~/Projects/agents/CLAUDE.md
 ```
 
-Claude Code resolves that import at session start, so the repo's session behaves exactly as if
-`CLAUDE.md` and `instructions.md` were copied in — without actually copying them. Skills and subagents
-reach every repo the same way, via `~/.claude/skills` and `~/.claude/agents` each symlinked once to the
-folders in [`.claude/`](.claude/README.md) here. Hooks need no distribution step at all — they're
-registered once in `~/.claude/settings.json`, which already applies globally.
+In a personal repo, that line is the root `CLAUDE.md` (or its first line, above project-specific content).
+In a repo shared with colleagues, it goes in `CLAUDE.local.md` instead — never committed, excluded via
+`.git/info/exclude` — so the team's `CLAUDE.md` stays untouched. Claude Code resolves the import at
+session start, so the session behaves as if `CLAUDE.md` and `instructions.md` were copied in.
 
-If a repo already has its own `CLAUDE.md` with project-specific content (as opposed to one of these thin
-stubs), the import line is added to the top of that file instead of replacing it — see that repo's
-`CLAUDE.md` for the split between shared and project-specific guidance.
+Everything else is per machine, not per repo: `~/.claude/agents` is symlinked to
+[`.claude/agents/`](.claude/README.md), each skill is symlinked into `~/.claude/skills/`, and hooks,
+statusline, and the subagent model are set once in `~/.claude/settings.json`. See
+[`docs/03-cross-repo-distribution.md`](docs/03-cross-repo-distribution.md) for the details and gotchas.
 
 ## Where to go next
 

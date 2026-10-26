@@ -87,38 +87,81 @@ Recommended inline definition box pattern:
 - Do not assume GitHub-specific callout syntax is supported by the local preview renderer.
 - If visual callout boxes are required, use only syntax and extensions that are confirmed to work in the
   repository's agreed VS Code setup.
-- For mermaid diagrams, the following syntax is confirmed to work in VS Code with the "Markdown Preview
-  Mermaid Support" extension and is fully compatible with Azure DevOps Wiki rendering:
-	1. Use `graph TD` (top-down direction).
-	2. Wrap all node labels in double quotes inside square brackets: `["Label text"]`.
-	3. Do not use parentheses `()` or special characters in node labels.
-	4. Do not use quotes (`"`) inside edge labels.
-	5. Use plain ASCII hyphens (e.g., `real time`, not `real‑time` or `real-time`) in edge labels.
-	6. Avoid naming a node the same as its subgraph.
-	7. Use `subgraph` for logical groupings (e.g., Frontend, Backend, AzureFluidRelay).
-	8. To control node stacking within a subgraph, use phantom links (`~~~`) between nodes rather than a
-	   `direction` directive inside the subgraph — the inner `direction` directive is unreliable across
-	   renderer versions. In a `flowchart LR` diagram, phantom links between nodes within a subgraph force
-	   vertical stacking; in a `flowchart TD` diagram, they force horizontal stacking. Example:
-	   `A ~~~ B ~~~ C` stacks A, B, C vertically inside a `flowchart LR` subgraph. Phantom links affect
-	   layout but render as invisible — no edge is drawn.
-	9. Always add an explicit `style` directive for every subgraph (`fill`, `stroke`, `stroke-width:2px`).
-	   Without it, subgraph borders are invisible in dark mode. Place all `style` lines at the bottom of
-	   the diagram block, after all edges.
-	10. Use color to signal identity, not decoration. Before picking colors, identify which concepts must
-	    be tracked across multiple diagrams in the same document — assign a distinct color to each of
-	    those, and use neutral gray (`stroke:#888888`) for any grouping that is just a container with no
-	    special tracked meaning. The same concept always gets the same color within a document; colors do
-	    not carry between documents. Pick 3–5 mid-luminance colors (e.g. `#5588cc`, `#55aa77`, `#cc8844`,
-	    `#9966cc`) for tracked concepts — saturated enough to distinguish, not so bright they dominate.
-	    If the repository has its own corporate/brand color palette (a `color_guidelines.md`, brand
-	    style guide, or similar source of truth), pick from that palette instead of the generic example
-	    colors above — use each brand color's own light tint for `fill` and its full-strength value for
-	    `stroke`. In that case the same role-to-color mapping should carry across every diagram in the
-	    repository (not just within one document), since a brand palette is a small, deliberately reused
-	    set of colors rather than an arbitrary per-document choice.
-	11. Keep node labels short — a few words or a function signature. Use surrounding prose for
-	    explanation rather than long sentences inside boxes.
+
+## Mermaid diagrams
+
+The syntax below is confirmed to work in VS Code with the "Markdown Preview Mermaid Support" extension
+and is compatible with Azure DevOps Wiki rendering.
+
+### Direction and layout
+
+1. Default to `graph TD`. Switch to `graph LR` when the diagram is a wide branching flow: several parallel
+   lanes that each hit a step or two and then converge. Top down turns that shape into a very tall, narrow
+   column that no longer fits a slide or a page.
+2. `direction LR` or `direction TB` as the first line inside a `subgraph` block controls how that
+   subgraph's own children are laid out, independently of the diagram's direction. This is the reliable
+   way to run one group across the page while the rest of the diagram runs top down.
+3. Phantom links (`~~~`) reorder siblings, but the axis they stack on is not consistent between diagrams:
+   the same `A ~~~ B ~~~ C` produced a horizontal row in one diagram and a vertical column in another.
+   Reach for `direction` first, and use `~~~` only to fix the order of nodes that are already laid out on
+   the axis you want. Phantom links render as invisible, so no edge is drawn.
+4. Where two subgraphs sit next to each other, their order comes from declaration order and from the edges
+   between their children, not from anything settable. The second subgraph declared often renders first.
+   If the order is wrong, swap the declarations and re-render.
+5. Keep an edge inside the subgraph that owns both of its endpoints. An edge crossing into a nested
+   subgraph from outside pushes the layout apart, leaves a large empty gap, and can make the inner
+   subgraph's border overflow the outer one. If a diagram needs that edge, move the outside node into the
+   group or drop it and say it in prose instead.
+6. Avoid naming a node the same as its subgraph.
+7. Use `subgraph` for logical groupings (e.g., Frontend, Backend, AzureFluidRelay).
+
+### Labels
+
+8. Wrap every plain node label in double quotes inside square brackets: `["Label text"]`.
+9. **Every subgraph title is bold**, written as a markdown string with backticks inside the quotes:
+
+   ```
+   subgraph Content["`**Instruction and knowledge**`"]
+   ```
+
+   The backticks route the label through mermaid's markdown renderer, so `**…**` renders bold and the
+   title box is still measured correctly. Leaf node labels and edge labels stay plain. Bold is what marks
+   a box that contains other boxes, so it reads as the heading of that group.
+10. **Never set `font-size` in a `style` directive.** Mermaid measures the title and sizes the box before
+    that CSS is applied, so an enlarged title overflows and its last words are cut off. The narrower the
+    box, the worse it is. Bold through a markdown string is measured during layout and therefore fits, so
+    bold is the only size cue available: there is no reliable way to enlarge label text.
+11. Do not use parentheses `()` or special characters in node labels.
+12. Do not use quotes (`"`) inside edge labels.
+13. Use plain ASCII hyphens (e.g., `real time`, not `real‑time` or `real-time`) in edge labels.
+14. Keep node labels short, a few words or a function signature. Long titles on two adjacent subgraphs
+    overlap each other's text. Use surrounding prose for explanation rather than long sentences inside
+    boxes.
+
+### Colour
+
+15. Always add an explicit `style` directive for every subgraph (`fill`, `stroke`, `stroke-width:2px`).
+    Without it, subgraph borders are invisible in dark mode. Place all `style` lines at the bottom of
+    the diagram block, after all edges.
+16. Use color to signal identity, not decoration. Before picking colors, identify which concepts must
+    be tracked across multiple diagrams in the same document, assign a distinct color to each of
+    those, and use neutral gray (`stroke:#888888`) for any grouping that is just a container with no
+    special tracked meaning. The same concept always gets the same color within a document; colors do
+    not carry between documents. Pick 3 to 5 mid-luminance colors (e.g. `#5588cc`, `#55aa77`, `#cc8844`,
+    `#9966cc`) for tracked concepts, saturated enough to distinguish, not so bright they dominate.
+    If the repository has its own corporate/brand color palette (a `color_guidelines.md`, brand
+    style guide, or similar source of truth), pick from that palette instead of the generic example
+    colors above: use each brand color's own light tint for `fill` and its full-strength value for
+    `stroke`. In that case the same role-to-color mapping should carry across every diagram in the
+    repository (not just within one document), since a brand palette is a small, deliberately reused
+    set of colors rather than an arbitrary per-document choice.
+
+### Verify before shipping
+
+17. A diagram that parses can still be unreadable. Render it before calling it done, for example with
+    `npx @mermaid-js/mermaid-cli -i diagram.mmd -o diagram.png`, and look at the result for clipped
+    titles, overlapping boxes and large empty gaps. These are layout faults that no amount of reading the
+    source will reveal.
 
 ## Style and Tone
 
