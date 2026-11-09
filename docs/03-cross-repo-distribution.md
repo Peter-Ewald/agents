@@ -18,25 +18,25 @@ mentions `.claude/skills` defensively even though no repo has that symlink anymo
 
 ## Gotcha 1: a monorepo subdirectory is not a separate repo
 
-`Task Force Evaluation`, `LLM Evaluation Architecture`, and `Litellm-Model integration layer` look like
-three project folders, but they're subdirectories of one shared git repository, `Chapter_Repos` — running
-`git rev-parse --show-toplevel` from any of them returns `Chapter_Repos`, not the subdirectory itself.
+`LLM Evaluation Architecture` and `Litellm-Model integration layer` look like separate project folders,
+but they're subdirectories of one shared git repository, `Chapter_Repos` — running
+`git rev-parse --show-toplevel` from either returns `Chapter_Repos`, not the subdirectory itself.
 
 This matters because a `.gitignore` pattern with a slash in it (like `.claude/*`) is anchored to the
 directory of the `.gitignore` file that contains it — it does not cascade into subdirectories. Placing the
 "Personal Claude Code state" block in `Chapter_Repos/.gitignore` without a `**/` prefix protected nothing
-in the three subdirectories; it silently only would have protected a `.claude/` folder placed directly at
+in those subdirectories; it silently only would have protected a `.claude/` folder placed directly at
 the `Chapter_Repos` root, which doesn't exist. The fix is a `**/`-prefixed pattern once at the shared root
 (`**/.claude/*`, `**/CLAUDE.md`, etc.), which reaches every subdirectory — present and future — instead of
 needing a duplicated, drift-prone copy of the same block in each one.
 
 Each subdirectory still gets its own `CLAUDE.md` stub, though — Claude Code sessions are opened per
 subdirectory in this setup, so each needs the import even though git treats them as one repo. A commit
-touching gitignore rules for any of the three is one commit in `Chapter_Repos`, not three.
+touching gitignore rules for both is one commit in `Chapter_Repos`, not two.
 
 ## Gotcha 2: a repo shared with colleagues keeps the import out of git
 
-Repos other than this one aren't all personal — `Project Green` and `Task Force Evaluation`, for instance,
+Repos other than this one aren't all personal — `Project Green` and `Semantic Evaluation`, for instance,
 have colleagues with their own working style and their own `CLAUDE.md`. The import is an absolute path
 specific to this machine, so committing it would be meaningless for anyone else.
 
@@ -48,8 +48,8 @@ that per clone (`Chapter_Repos` excludes `**/CLAUDE.local.md` there, which reach
 The first session that meets an import from outside the working directory asks once to approve it;
 declining disables the import for that project.
 
-A repo whose committed `.claude/settings.json` enables a plugin this harness replaces — `Task Force
-Evaluation` enables the team plugin `team-ai-layer` — also needs that plugin set to `false` in its
+A repo whose committed `.claude/settings.json` enables a plugin this harness replaces also needs
+that plugin set to `false` in its
 `.claude/settings.local.json`. A project setting outranks the user one, so disabling it in
 `~/.claude/settings.json` alone leaves it loaded.
 

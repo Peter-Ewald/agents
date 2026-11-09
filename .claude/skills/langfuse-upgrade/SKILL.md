@@ -8,7 +8,7 @@ description: Investigates a new langfuse (Python SDK) release against semantic_t
   to check/upgrade the langfuse dependency.
 ---
 
-Task Force Evaluation's two published packages both depend on `langfuse` (the Python SDK):
+The `Semantic Evaluation` repository's two published packages both depend on `langfuse` (the Python SDK):
 `semantic_tracing` declares it directly, `semantic_evaluation` currently only gets it transitively (a
 separate, already-logged gap — see its own backlog entry; fix it here too if still open when this runs).
 `langfuse` ships breaking changes inside otherwise-normal minor releases surprisingly often (removed REST

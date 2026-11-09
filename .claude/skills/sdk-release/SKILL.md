@@ -6,7 +6,7 @@ disallowed-tools: WebSearch, WebFetch
 ---
 
 Runs the SDK release sequence for `semantic_tracing` or `semantic_evaluation`. Must be invoked from the
-`Task Force Evaluation` repo root, where `sdk/<package>/` lives.
+`Semantic Evaluation` repo root (`~/Projects/Semantic_Evaluation`), where `sdk/<package>/` lives.
 
 1. Confirm `sdk/<package>/CHANGELOG.md` already has a `## [<version>]` entry — changelog before release,
    never the other way around. If it doesn't, stop and write the changelog entry first (per the

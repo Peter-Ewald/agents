@@ -1,6 +1,6 @@
 #!/bin/bash
 # Releases sdk/<package> at <version>: bump version, build, publish, stage the result.
-# Assumes it's run from the Task Force Evaluation repo root (where sdk/<package>/ lives)
+# Assumes it's run from the Semantic Evaluation repo root (where sdk/<package>/ lives)
 # and that sdk/<package>/CHANGELOG.md already has a `## [<version>]` entry — the caller
 # (sdk-release SKILL.md) checks that before invoking this script.
 set -euo pipefail
@@ -10,7 +10,7 @@ VERSION="${2:?usage: release.sh <package> <version>}"
 PKG_DIR="sdk/$PACKAGE"
 
 if [ ! -d "$PKG_DIR" ]; then
-  echo "No such package directory: $PKG_DIR (run from the Task Force Evaluation repo root)" >&2
+  echo "No such package directory: $PKG_DIR (run from the Semantic Evaluation repo root)" >&2
   exit 1
 fi
 
