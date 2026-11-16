@@ -132,18 +132,33 @@ def test_merge_hold_blocks_main_push(env):
         "expires=2099-01-01",
     )  # fmt: skip
     assert filed.returncode == 0, filed.stderr
+    invoke = (
+        "az devops invoke --area git --resource pullRequests --route-parameters "
+        "project=P repositoryId=R pullRequestId=5 --http-method PATCH --api-version 7.1 "
+    )
+    with open(os.path.join(env.repo, "complete.json"), "w") as handle:
+        handle.write(
+            '{"status": "completed", "completionOptions": {"mergeStrategy": "rebase"}}'
+        )
+    with open(os.path.join(env.repo, "title.json"), "w") as handle:
+        handle.write('{"title": "x"}')
     for command in (
         "git push origin main",
         "git push origin HEAD:main",
         "git push origin wave-12-x:main",
         "az repos pr update --id 5 --status completed",
         f"cd {env.repo} && gh pr merge 5",
+        invoke + "--in-file complete.json",
+        "printf '{}' > \"$BODY\" && " + invoke + '--in-file "$BODY"',
     ):
         result = env.guard(command)
         assert result.returncode == 2, command
         assert "wave-12-after-11.md" in result.stderr
     assert env.guard("git push -u origin wave-12-x").returncode == 0
     assert env.guard("az repos pr create --draft --title x").returncode == 0
+    assert env.guard(invoke + "--in-file title.json").returncode == 0
+    get = invoke.replace("PATCH", "GET")
+    assert env.guard(get).returncode == 0
     assert env.board_cli("satisfy", f"{REPO}/wave-12-after-11").returncode == 0
     assert env.guard("git push origin main").returncode == 0
 

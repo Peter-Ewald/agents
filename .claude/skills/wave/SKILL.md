@@ -170,12 +170,17 @@ Commit messages follow `instructions.md`'s "Commit messages", passed with `-m`, 
 5. **Land it**, never with a merge commit you created:
    - `integration: pr`: push the branch (`--force-with-lease` after the rebase), create or publish the PR
      with the report as its description, wait for required checks, and complete it with rebase and
-     fast-forward. If the repository refuses that strategy, complete it with the one it allows and say so
-     in the report.
+     fast-forward, using the completion command the repo's instructions name. On Azure Repos
+     `az repos pr update` cannot choose a strategy, so the PR completes through `az devops invoke`
+     (PATCH on `pullRequests`, `completionOptions.mergeStrategy: "rebase"`); on GitHub it is
+     `gh pr merge --rebase`. If the repository refuses that strategy, complete it with the one it allows
+     and say so in the report.
    - `integration: push`: `git push origin HEAD:main`; if `main` moved, rebase again rather than merge.
 6. **After the merge:** remove the wave's `pending:` tags from its eval items (dataset lock, pull, edit,
    push, unlock); satisfy the holds that wait on this wave; release the lock; remove the worktree and
-   delete the branch locally and on origin; delete the plan entry.
+   delete the branch locally and on origin; delete the plan entry. A server-side rebase gives the
+   commits new ids, so `git branch -d` may refuse: confirm the change is on `origin/main`, then use
+   `git branch -D`.
 
 ## 8. Report
 

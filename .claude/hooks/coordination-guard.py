@@ -4,8 +4,9 @@ coordination board says another wave must go first.
 
 Blocks (exit 2) when
 - the command integrates to main (`git push` targeting main, `az repos pr update --status
-  completed`, `gh pr merge`) and an open `blocks: merge` hold names this repo+wave as waiting, or
-  the repo integration lock `lock.md` is held by a different wave;
+  completed`, an `az devops invoke` PATCH that completes a pull request, `gh pr merge`) and an open
+  `blocks: merge` hold names this repo+wave as waiting, or the repo integration lock `lock.md` is
+  held by a different wave;
 - the command pushes a dataset (`eval-dataset push --name D` / `push-all`) and the matching
   `lock-dataset-<D>.md` is held by a different wave.
 No board folder: allow silently. Internal errors are printed to stderr and never block.
@@ -51,6 +52,39 @@ def push_targets_main(args, directory):
     return False
 
 
+def option(args, name):
+    """Value of `name` given as `name value` or `name=value`, else None."""
+    for i, arg in enumerate(args):
+        if arg == name and i + 1 < len(args):
+            return args[i + 1]
+        if arg.startswith(name + "="):
+            return arg.split("=", 1)[1]
+    return None
+
+
+def invoke_completes_pr(args, directory):
+    """args: tokens after `az devops invoke`. True if the call can complete a pull request.
+
+    Azure Repos completes with rebase and fast-forward only through the REST API, as a PATCH on the
+    pullRequests resource whose body sets status completed or turns on auto-complete. A body file
+    that cannot be read yet (written earlier in the same command, or named by a shell variable)
+    counts as completing.
+    """
+    if (option(args, "--resource") or "").lower() != "pullrequests":
+        return False
+    if (option(args, "--http-method") or "").upper() != "PATCH":
+        return False
+    path = option(args, "--in-file")
+    if not path:
+        return False
+    try:
+        with open(os.path.join(directory, os.path.expanduser(path))) as handle:
+            body = handle.read()
+    except OSError:
+        return True
+    return bool(re.search(r'"status"\s*:\s*"completed"|"autoCompleteSetBy"', body))
+
+
 def classify(tokens, directory):
     """Return (directory, kind, dataset) with kind in merge|dataset|None."""
     while tokens and re.match(r"^[A-Za-z_][A-Za-z0-9_]*=", tokens[0]):
@@ -77,6 +111,10 @@ def classify(tokens, directory):
         if re.search(
             r"--status[ =]completed\b|--auto-complete[ =](true|yes|on)\b", joined
         ):
+            return directory, "merge", None
+        return directory, None, None
+    if tokens[:3] == ["az", "devops", "invoke"]:
+        if invoke_completes_pr(tokens[3:], directory):
             return directory, "merge", None
         return directory, None, None
     for idx, tok in enumerate(tokens[:8]):

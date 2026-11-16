@@ -40,9 +40,7 @@ What to watch, and fix in the harness where it fails:
 
 Starts once `Semantic_Evaluation` Waves 64 (`push` merges what changed in Langfuse since the pull) and 63
 (a run selects items by id and leaves out other waves' `pending:` tags) have landed: the harness docs and
-skills already assume both. `Semantic_Evaluation` PRs complete with rebase and fast-forward only once its
-team allows that strategy; until then a wave there completes with the allowed one and says so in its
-report.
+skills already assume both.
 
 Done when both waves have merged as batch waves without manual help, or each place that needed help is a
 harness fix or a backlog entry.

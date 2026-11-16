@@ -173,7 +173,7 @@ a rebase conflict and judge a re-verification. The coordinator never merges. The
 
 | Strategy | When | How |
 |---|---|---|
-| PR per wave (`integration: pr`, the default) | Repos with a branch policy | Completed with rebase and fast-forward, so the PR adds no merge commit |
+| PR per wave (`integration: pr`, the default) | Repos with a branch policy | Completed with rebase and fast-forward, so the PR adds no merge commit. Azure Repos does this only through the REST API (`az devops invoke`, `mergeStrategy: "rebase"`); the repo's instructions carry the exact command |
 | Push `main` (`integration: push`) | Repos whose instructions carry `Integration: push` | `git push origin HEAD:main` after the rebase; if `main` moved, rebase again |
 | Stacked branch | Wave B needs wave A's code before A is merged | B branches from A's branch; a hold keeps B from merging first; after A lands, `git rebase --onto origin/main <A's old tip>` |
 
@@ -276,7 +276,7 @@ repo's `CLAUDE.md` as its first step.
 | A finished subagent can be continued with `SendMessage`, with its context intact | A blocked wave resumes with your answer |
 | Subagents compact on their own as their context fills; `autoCompactWindow` in an agent file makes one compact earlier; nothing compacts a subagent on request | Every agent file sets `autoCompactWindow`; a parked wave hands over a written state instead |
 | Background subagents need `CLAUDE_CODE_DISABLE_BACKGROUND_TASKS` unset | It is not set in `~/.claude/settings.json` |
-| A background subagent is denied any permission not already granted | Batch waves rely on auto mode and allow rules for git, the test runners, `az repos`, `gh` and `eval-dataset` |
+| A background subagent is denied any permission not already granted | Batch waves rely on auto mode and allow rules for git, the test runners, `az repos`, `az devops invoke`, `gh` and `eval-dataset` |
 | A message from another session never counts as your consent | Parallel sessions run in the same permission mode |
 | Subagent model order: per-call `model`, then the agent file's `model:`, then `CLAUDE_CODE_SUBAGENT_MODEL` | Tiers are agent files with their own `model:` and `effort:` |
 | Claude Code's own worktree creation works only for the session's current repo | The coordinator's waves create worktrees with `new-wave-worktree.sh` |
