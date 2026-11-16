@@ -27,6 +27,57 @@ A bare question without that scaffolding is rarely useful in either direction.
 
 ---
 
+# Talking to the User
+
+Applies to every chat message, the wave report's `For the user:` field, and everything the coordinator
+relays. Commit messages and the PR description keep their own detailed formats.
+
+**Attention first, in plain words.** What needs a decision or should change my picture of the work comes
+first, with enough context to act on it without opening a file: what happened, why it matters for the
+wave's goal, the relevant part of the backlog (only that part), and the options with a recommendation
+(the table from *Clarifying Questions* when there are more than two). These always count as attention
+items and get that context:
+
+- a failed run or a missed gate, and a failure that is not this wave's
+- an inconsistency between plan, code, docs, backlog or another wave
+- a deviation from the approved plan, a new dependency, a breaking change
+- anything that changes another wave's assumptions or order
+
+**Everything else gets one line, at outcome level.** Verification is a result, not a procedure:
+"Copilot eval set copilot-dev v3 passed", not the commands, files and run ids behind it. Process steps
+that went as planned (worktree, rebase, backlog edit, plan archive, lock) are not mentioned at all.
+Define a term on first use when it could be read two ways.
+
+## Reporting level
+
+Report at the level I review at, which depends on what the work produces: behaviour for code, text for
+design and documentation. Name the units of the output, one level above the individual edits. An
+attention item goes as deep as I need to act on it, down to the test or line if that is what decides.
+
+| Kind of work | Report at | Example |
+|---|---|---|
+| Implementation wave | Modules or capabilities, grouped by service, package or repo | "Scoring service: judge evaluators, catalogue. SDK: run-file loader, `eval-run`." |
+| Refactor that keeps behaviour | The same, plus one line that behaviour is unchanged | "SDK dataset module split in two; behaviour unchanged, suite passed." |
+| Experiment | Configurations and their metrics, and the decision they support | "gpt-5-mini vs gpt-5: correctness 4.1 vs 4.3, cost −60 %." |
+| Architecture or concept work in files | Document and section, with what each section now decides | "architecture/03-scoring.md § Gate: gates compare normalized scores only." |
+| Documentation sweep | File, with the false claim and its correction | "docs/05-runs.md said resume needs a run id; it reads the manifest. Fixed." |
+| Harness or instruction changes | File and rule | "instructions.md § Talking to the User: new reporting levels." |
+| Backlog curation | Entry and tier | "The split-library wave moved to Next Up, step 2." |
+| Coordinator | One line per wave; attention items in full | "The repeat-the-Copilot-eval-runs wave (41) merged; eval set v3 passed." |
+
+Work that mixes kinds is reported by its main output: documentation upkeep in an implementation wave is
+housekeeping and goes unmentioned, while in a sweep wave the documents are the output. A wave plan
+follows the default for its kind and states a `Reporting level:` line only when it differs.
+
+## Naming waves
+
+Name a wave by what it does, with its number in brackets: "the *repeat the Copilot eval runs* wave (41)
+should land before the *split the knowledge library* wave (45), because …". The description comes from
+the plan's title, or else the branch slug. Add the repo only when the number alone is ambiguous:
+"(Semantic_Evaluation 63)". Never a bare "wave 41".
+
+---
+
 # Implementation Waves
 
 Non-trivial work is organised into **waves**. A wave is one coherent slice of change that lands as a single completed objective (not a single commit). Sub-waves (`0.A`, `0.B`, …) split a wave when parts can land independently.

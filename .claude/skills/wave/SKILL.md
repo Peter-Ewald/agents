@@ -47,7 +47,21 @@ or Later Considerations is promoted to Next Up first, rewritten to fit that tier
 `docs/history/index.md` if it exists and open the detail files whose titles relate; cite them where they
 shaped the plan.
 
-Write the session plan (see `CLAUDE.md`'s "Session plan location") with:
+Write the session plan (see `CLAUDE.md`'s "Session plan location"). Its title says in a few words what
+the wave does ("Repeat the Copilot eval runs"); that title is how the wave is named in every message (see
+`instructions.md`'s "Talking to the User"). The plan opens with a **summary** the user can approve from,
+at the wave's reporting level, and puts the detail after it:
+
+| Summary line | Holds |
+|---|---|
+| Goal | What is true afterwards that is not now, and which backlog entry it serves |
+| Kind | Implementation, refactor, experiment, documentation or sweep; this sets the reporting level |
+| Changes | The modules or documents affected, grouped by service, package or repo; no file list |
+| Behaviour | The acceptance cases in one plain sentence each |
+| Decisions | What the approval settles that the user might decide differently, each with the alternative |
+| Risks and holds | What could make it fail or wait, and which other waves it touches |
+
+Below the summary:
 
 - **Goal, exit criteria, verification commands** (the repo's lint, format check, tests, smoke commands).
 - **Acceptance cases**: for each behaviour the wave adds or changes, one row the user can check without
@@ -71,7 +85,8 @@ Write the session plan (see `CLAUDE.md`'s "Session plan location") with:
   when the repo's instructions carry an `Integration: push` line, `pr` otherwise.
 
 Before finalizing, invoke `design-conventions` via the Skill tool and check the approach against it.
-Revise on feedback; call `ExitPlanMode` once ready. On approval, file the plan entry and its holds on the
+Discuss the plan with the user per `instructions.md`'s "Talking to the User": the summary and the open
+decisions, not the sub-task table, unless asked. Revise on feedback; call `ExitPlanMode` once ready. On approval, file the plan entry and its holds on the
 board per [board.md](board.md). A batch wave ends here for the planning chat; continue with the next
 backlog entry, or suggest `/clear`.
 
@@ -191,8 +206,9 @@ Commit messages follow `instructions.md`'s "Commit messages", passed with `-m`, 
 
 ## 8. Report
 
-Return the report in [report.md](report.md) and put it into the PR description. An interactive wave shows
-it in chat and then suggests `/clear`.
+Return the report in [report.md](report.md) and put the whole of it into the PR description. An
+interactive wave shows only its head in chat (status, question, `For the user:`, outcome, PR link) and
+then suggests `/clear`.
 
 ## Stop conditions
 

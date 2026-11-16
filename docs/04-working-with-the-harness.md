@@ -66,8 +66,9 @@ graph TD
 **What you review** is the plan and its acceptance cases, not the code. An acceptance case says in words
 and data what must be true afterwards, so you can check it without reading a diff. After approval the
 agent works without asking. A wave lands on `main` only when its done check holds, with the evidence for
-each row, and the report in the pull request description tells you what was built, how each acceptance
-case was checked and what to look at. Nothing runs past what was approved: a wave stops with one question
+each row. What reaches you is the head of its report: what needs your attention, in plain words with the
+context to decide, and the outcome in a line or two; the evidence for each acceptance case stays in the
+pull request description. Nothing runs past what was approved: a wave stops with one question
 when the plan cannot be carried out as written, rather than deciding for itself.
 
 **Blue** marks the plan-mode permission boundary, with the same meaning as in

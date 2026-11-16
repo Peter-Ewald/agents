@@ -270,7 +270,8 @@ def summary(entry: Entry) -> str:
             f"{entry.get('condition')} [blocks {entry.get('blocks')}]"
         )
     if kind == "plan":
-        return f"{entry.get('wave')} {entry.get('mode')} integration={entry.get('integration')}"
+        title = f'"{entry.get("title")}" ' if entry.get("title") else ""
+        return f"{title}{entry.get('wave')} {entry.get('mode')} integration={entry.get('integration')}"
     if kind == "lock":
         return f"held by {entry.get('wave')} since {entry.get('created')}"
     first = next((ln.strip() for ln in entry.body.splitlines() if ln.strip()), "")

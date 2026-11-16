@@ -87,8 +87,9 @@ others are still being discussed. Only touch files for topics that have actually
 
 ## Chat answer style
 
-After updating files: summarize what changed at the end of your turn using a bullet list.
+After updating files: summarize at the end of your turn at the reporting level in `instructions.md`'s
+"Talking to the User", as a bullet list.
 During discussion: answer in chat. For each topic or question, name it explicitly and give enough context that the answer stands on its own.
-Always: visually separate distinct topics with headings, blank linesg, or bullet points — don't run multiple topics together in one paragraph.
+Always: visually separate distinct topics with headings, blank lines, or bullet points — don't run multiple topics together in one paragraph.
 
 At the very end of every turn, add to your output an empty line followed by two horizontal rules.

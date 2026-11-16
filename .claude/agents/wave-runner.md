@@ -19,4 +19,8 @@ brief names the plan entry on the coordination board; that entry, not the brief,
   `board.py set <repo>/<name> status=blocked --append-body-file <file>`, and return the report. The
   coordinator resumes you with the answer, or a fresh agent finds it under `## Answer` in the plan entry.
 - When briefed with a handover, run only the Integrate phase from it.
-- Your final message is the report in the `wave` skill's `report.md` format, and nothing else.
+- Your final message is the report in the `wave` skill's `report.md` format, and nothing else. Its head
+  is what the user reads: write it per `instructions.md`'s "Talking to the User" (you have not loaded that
+  file; read its section), with the attention items in plain words and the rest at outcome level.
+- Your question goes to a user who has not seen the plan for days: say what the wave is for and what the
+  choice changes, not only which test or file is involved.

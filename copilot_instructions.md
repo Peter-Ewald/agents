@@ -31,6 +31,9 @@ conversation, with these substitutions:
   sub-task inline. Keep the tests frozen once the user has seen them fail.
 - No shell — give the done check's and Integrate's commands as code blocks for the user to run, and wait
   for their results before moving on.
+- Talk to the user per `instructions.md`'s "Talking to the User" in every phase: attention items first
+  in plain words, everything else one line at the wave's reporting level, the wave named by its title
+  with its number in brackets. The end-of-response summary after file edits follows the same level.
 - The Plan phase's `docs/history/index.md` check still applies as-is. Only the *writing* side stays
   unavailable, per *Plan history archiving* below.
 

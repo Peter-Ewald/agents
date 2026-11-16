@@ -266,7 +266,8 @@ coordinator`, then `/coordinate`), so every repo and its worktrees are inside it
    their branches and wakes `waiting` ones.
 
 It never edits code, never merges, and holds little itself: each wave returns a short report, not its
-diffs. Nesting is coordinator, `wave-runner`, implementer: two of the three subagent levels Claude Code
+diffs, and the coordinator passes on only its head: one line per wave that went as planned, the full
+context for what needs you. Waves are named by what they do, with the number in brackets. Nesting is coordinator, `wave-runner`, implementer: two of the three subagent levels Claude Code
 allows. A `wave-runner` starts outside its repo, so it creates its worktree with the script and reads the
 repo's `CLAUDE.md` as its first step.
 

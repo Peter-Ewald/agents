@@ -39,8 +39,8 @@ Each wave ends with a report in the `wave` skill's `report.md` format. On a repo
 
 | Status | You |
 |---|---|
-| `merged` | Tell the user in two lines (wave, PR, follow-ups). Re-read the board: a hold this wave satisfied may free another wave to start or to wake |
-| `waiting` | Note it; nothing to tell the user |
+| `merged` | Relay the report's head (see "Talking to the user"). Re-read the board: a hold this wave satisfied may free another wave to start or to wake |
+| `waiting` | Note it; tell the user only when its `For the user:` field is not "nothing" |
 | `blocked` | Ask the user the wave's question, as in "Questions to the user" |
 | `failed` | Set the plan entry to `blocked` and ask the user how to go on, as in "Questions to the user": the question says what failed and where; the options are, for example, retry, drop the plan or take the wave over interactively |
 
@@ -52,14 +52,15 @@ resumed.
 A question is the one thing a wave cannot get past without the user, so it goes out on its own, never inside
 a longer message:
 
-1. **Notify.** Call `PushNotification` with one line: `<repo>/<wave> blocked: <the question, shortened>`.
+1. **Notify.** Call `PushNotification` with one line: `<title> (<NN>) blocked: <the question, shortened>`.
 2. **Ask.** The next call is `AskUserQuestion`: no text, board action or other tool call comes between a
    `blocked` report and the question. Each blocked wave is one question, up to four in one call. The
-   question stands on its own, because the dialog may be all the user sees: the wave, the acceptance case
-   or plan row, what the agent tried. The header is the wave's short name; the wave's `Options:` are the
-   choices, its recommended one first. The user can always answer in free text.
+   question stands on its own, because the dialog may be all the user sees: what the wave is for, the
+   acceptance case or plan row in plain words, what the agent tried and why it cannot go on. The header is
+   the wave's title, shortened; the wave's `Options:` are the choices, its recommended one first, each
+   description saying what it changes. The user can always answer in free text.
 3. **Fallback.** When `AskUserQuestion` cannot carry the question (no options, or more than four), send a
-   message that holds only the question, headed `QUESTION: <repo>/<wave>`.
+   message that holds only the question, headed `QUESTION: <title> (<NN>)`.
 4. **Keep it on the board.** The wave sets its entry to `blocked` and appends the question to its body. If
    either is missing, set it yourself: `board.py set <repo>/<name> status=blocked --append-body-file
    <file>` with a `## Question` section. The board, not the report, is where you read a question again.
@@ -92,9 +93,20 @@ The board, not your memory, is the state. Read it and:
 
 ## Talking to the user
 
+Follow `instructions.md`'s "Talking to the User": name a wave by its plan's `title` with its number in
+brackets ("the *batch upload* wave (12)"; add the repo when the number is ambiguous), and spend words on
+what needs the user, not on what went as planned.
+
 Start every message with one line per `blocked` plan entry still waiting for an answer (`board.py list
---kind plan --status blocked`): `BLOCKED <repo>/<name>: <its question in one line>`. Leave the lines out
+--kind plan --status blocked`): `BLOCKED <title> (<NN>): <its question in one line>`. Leave the lines out
 when there is none.
 
-Answer "what is running" from the board: one line per plan entry with its status. Keep messages short;
-the PR description carries the details.
+On a report, relay its head, never the evidence below its line:
+
+- `For the user:` is "nothing": one line, the wave and its `Outcome:`, for example "The *repeat the
+  Copilot eval runs* wave (41) merged: eval runs repeat per item; Copilot eval set copilot-dev v3 passed."
+- otherwise: that line, then the attention items as the wave wrote them, then what they mean for other
+  waves on the board (a hold, an order that should change, a plan that now rests on a false assumption).
+
+Answer "what is running" from the board: one line per plan entry, its title, number and status, and
+the reason when it is `blocked` or `waiting`. The PR description carries the details.

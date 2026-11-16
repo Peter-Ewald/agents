@@ -21,8 +21,10 @@ The board holds only work in flight: history belongs in `docs/history/`, pending
 
 ## Wave identity
 
-A wave is `<repo> / wave-<NN>`. Its key `wave-<NN>` comes from its branch `wave-<NN>-<slug>` (`board.py
-wave` prints it). The `coordination-guard.py` hook identifies a session's wave the same way.
+On the board a wave is `<repo> / wave-<NN>`. Its key `wave-<NN>` comes from its branch
+`wave-<NN>-<slug>` (`board.py wave` prints it). The `coordination-guard.py` hook identifies a session's
+wave the same way. Messages to the user name a wave by its plan's `title` with the number in brackets
+instead, per `instructions.md`'s "Talking to the User".
 
 ## Filing a plan
 
@@ -30,13 +32,14 @@ On approval, write the session plan to a file and file it:
 
 ```sh
 board.py file plan wave-12-batch-upload --repo Project-Green-HR-MVP --body-file <plan file> \
-  repo=Project-Green-HR-MVP wave=wave-12-batch-upload mode=batch status=ready integration=pr \
-  "holds=[w12-needs-sdk-0.9]" "exclusive=[ports 8001 8002]" "new_dependencies=[httpx]" \
+  repo=Project-Green-HR-MVP wave=wave-12-batch-upload "title=Batch upload" mode=batch status=ready \
+  integration=pr "holds=[w12-needs-sdk-0.9]" "exclusive=[ports 8001 8002]" "new_dependencies=[httpx]" \
   approved=2026-11-16 expires=2026-11-30
 ```
 
 | Field | Values |
 |---|---|
+| `title` | What the wave does, in a few words; messages to the user name the wave by it |
 | `mode` | `batch` (the coordinator runs it) or `interactive` (a session the user drives) |
 | `status` | `ready`, `running`, `waiting` (parked on a merge hold), `blocked`, `interrupted` |
 | `integration` | `pr` or `push` |

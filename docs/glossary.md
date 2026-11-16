@@ -108,6 +108,20 @@ The table every wave passes before it integrates: each row (acceptance cases, fr
 verification, eval results, documentation, backlog, history, changelog) needs its evidence. It replaces an
 approval of the commit.
 
+## Wave report
+
+What a wave returns when it ends, and its PR description. Its head is for you: status, the question when
+blocked, `For the user:` (what needs your attention, or "nothing") and a short outcome. Below a line
+follows the evidence for the PR: acceptance cases, done check, deviations, follow-ups. The coordinator
+relays only the head.
+
+## Reporting level
+
+How deep a message describes finished work: the units of what the work produced, one level above the
+individual edits. Modules grouped by service or package for an implementation wave; document and section
+for design work; file for a documentation sweep. Anything that needs your attention goes as deep as you
+need to act on it. `instructions.md`'s "Talking to the User" holds the table.
+
 ## Backlog
 
 The persistent, forward-looking `backlog.md` at a repo's root (formerly named `implementation_plan.md`).
