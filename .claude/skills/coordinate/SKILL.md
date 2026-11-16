@@ -19,7 +19,7 @@ reading the whole board with `board.py list`, then act on it as below.
 
 ## Starting waves
 
-Limit: **two** batch waves running at once. `waiting` waves do not count.
+Limit: **four** batch waves running at once. `waiting` waves do not count.
 
 Start a `plan` entry when all hold:
 

@@ -80,7 +80,7 @@ catches a plan abandoned without the agent remembering to archive it).
 | Piece | Role |
 |---|---|
 | Planning chat | You and an agent in plan mode. Each approved plan is filed on the board as `ready`. "Run wave N interactively" keeps that wave in the same session instead. |
-| Coordinator | One long-lived session (`/coordinate`, started in `~/Projects`). It starts `ready` waves as background wave runners, at most two at once, relays their questions to you and wakes parked waves. |
+| Coordinator | One long-lived session (`/coordinate`, started in `~/Projects`). It starts `ready` waves as background wave runners, at most four at once, relays their questions to you and wakes parked waves. |
 | `wave-runner` | The wave agent of one batch wave, running the `wave` skill from Specify to Report in the wave's worktree. |
 | Coordination board | The files under `~/.claude/coordination/` that hold plans, holds, locks, requests and notices, managed through `board.py`. |
 

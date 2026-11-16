@@ -36,7 +36,9 @@ What to watch, and fix in the harness where it fails:
 - Whether the parked wave's handover is enough for a fresh `wave-runner` to integrate without asking.
 - Token use of the coordinator, a `wave-runner` and each tier against the `autoCompactWindow` values set
   in the agent files.
-- Whether two parallel waves is the right limit in the `coordinate` skill.
+- Whether four parallel waves is the right limit in the `coordinate` skill: usage limits, and how often a
+  later wave has to rebase over the files every wave touches (`CHANGELOG.md`, `backlog.md`, the package
+  version).
 
 Starts once `Semantic_Evaluation` Waves 64 (`push` merges what changed in Langfuse since the pull) and 63
 (a run selects items by id and leaves out other waves' `pending:` tags) have landed: the harness docs and

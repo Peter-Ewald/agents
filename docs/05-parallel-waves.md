@@ -255,7 +255,7 @@ One session for all repos, started in the folder that holds them (`cd ~/Projects
 coordinator`, then `/coordinate`), so every repo and its worktrees are inside its working directory. It:
 
 1. starts each `ready` batch plan whose start holds are satisfied and whose exclusive resources are free,
-   as a background `wave-runner`, at most two at once;
+   as a background `wave-runner`, at most four at once;
 2. relays a `blocked` question with enough context to answer without opening the code, and passes the
    answer back to the stopped wave with `SendMessage`: a blocked wave waits minutes, so resuming it is worth
    its context;

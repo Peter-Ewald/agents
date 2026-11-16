@@ -61,7 +61,7 @@ Report. Briefed with a handover instead, it runs only the Integrate phase of a p
 ## Coordinator
 
 The one long-lived session (`claude --name coordinator`, then `/coordinate`) that starts ready waves as
-wave runners, at most two at once, relays their questions to you, wakes parked waves and keeps plan
+wave runners, at most four at once, relays their questions to you, wakes parked waves and keeps plan
 statuses true. It never edits code or merges.
 
 ## Coordination board
