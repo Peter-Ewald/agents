@@ -4,7 +4,7 @@ coordination board says another wave must go first.
 
 Blocks (exit 2) when
 - the command integrates to main (`git push` targeting main, `az repos pr update --status
-  completed`, an `az devops invoke` PATCH that completes a pull request, `gh pr merge`) and an open
+  completed`, an `az rest` PATCH that completes a pull request, `gh pr merge`) and an open
   `blocks: merge` hold names this repo+wave as waiting, or the repo integration lock `lock.md` is
   held by a different wave;
 - the command pushes a dataset (`eval-dataset push --name D` / `push-all`) and the matching
@@ -52,36 +52,39 @@ def push_targets_main(args, directory):
     return False
 
 
-def option(args, name):
-    """Value of `name` given as `name value` or `name=value`, else None."""
+def option(args, *names):
+    """Value of the first of `names` given as `name value` or `name=value`, else None."""
     for i, arg in enumerate(args):
-        if arg == name and i + 1 < len(args):
-            return args[i + 1]
-        if arg.startswith(name + "="):
-            return arg.split("=", 1)[1]
+        for name in names:
+            if arg == name and i + 1 < len(args):
+                return args[i + 1]
+            if arg.startswith(name + "="):
+                return arg.split("=", 1)[1]
     return None
 
 
-def invoke_completes_pr(args, directory):
-    """args: tokens after `az devops invoke`. True if the call can complete a pull request.
+def rest_completes_pr(args, directory):
+    """args: tokens after `az rest`. True if the call can complete a pull request.
 
-    Azure Repos completes with rebase and fast-forward only through the REST API, as a PATCH on the
-    pullRequests resource whose body sets status completed or turns on auto-complete. A body file
-    that cannot be read yet (written earlier in the same command, or named by a shell variable)
-    counts as completing.
+    Azure Repos completes with rebase and fast-forward only through the REST API, as a PATCH on
+    `.../pullrequests/<id>` whose body sets status completed or turns on auto-complete. A body given
+    as `@file` that cannot be read yet (written earlier in the same command, or named by a shell
+    variable) counts as completing.
     """
-    if (option(args, "--resource") or "").lower() != "pullrequests":
+    if (option(args, "--method", "-m") or "").lower() != "patch":
         return False
-    if (option(args, "--http-method") or "").upper() != "PATCH":
+    if "/pullrequests/" not in (option(args, "--url", "--uri", "-u") or "").lower():
         return False
-    path = option(args, "--in-file")
-    if not path:
+    body = option(args, "--body", "-b")
+    if not body:
         return False
-    try:
-        with open(os.path.join(directory, os.path.expanduser(path))) as handle:
-            body = handle.read()
-    except OSError:
-        return True
+    if body.startswith("@"):
+        try:
+            path = os.path.join(directory, os.path.expanduser(body[1:]))
+            with open(path) as handle:
+                body = handle.read()
+        except OSError:
+            return True
     return bool(re.search(r'"status"\s*:\s*"completed"|"autoCompleteSetBy"', body))
 
 
@@ -113,8 +116,8 @@ def classify(tokens, directory):
         ):
             return directory, "merge", None
         return directory, None, None
-    if tokens[:3] == ["az", "devops", "invoke"]:
-        if invoke_completes_pr(tokens[3:], directory):
+    if tokens[:2] == ["az", "rest"]:
+        if rest_completes_pr(tokens[2:], directory):
             return directory, "merge", None
         return directory, None, None
     for idx, tok in enumerate(tokens[:8]):

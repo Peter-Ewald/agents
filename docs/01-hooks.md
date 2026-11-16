@@ -150,7 +150,7 @@ repo has no board folder.
 |---|---|---|
 | `coordination-inject.py` | `SessionStart` | Deletes expired notices, then injects the repo's open entries, one line each; expired holds and locks older than 2 hours are marked `STALE`, never deleted |
 | `coordination-watch.py` | `PostToolUse` | Stats the board folder (state in `/tmp/claude-coordination-watch-<session_id>.json`) and reports added, changed or removed entries; silent on the first call and when nothing changed |
-| `coordination-guard.py` | `PreToolUse` (matcher `Bash`) | Blocks (exit 2) integrating to main (`git push` to main, `az repos pr update --status completed`, an `az devops invoke` PATCH on `pullRequests` whose body completes the PR or cannot be read yet, `gh pr merge`) while an open `blocks: merge` hold names this wave as waiting or `lock.md` is held by another wave, and blocks `eval-dataset push` / `push-all` while the matching `lock-dataset-<D>.md` is held by another wave |
+| `coordination-guard.py` | `PreToolUse` (matcher `Bash`) | Blocks (exit 2) integrating to main (`git push` to main, `az repos pr update --status completed`, an `az rest` PATCH on `.../pullrequests/<id>` whose body completes the PR or cannot be read yet, `gh pr merge`) while an open `blocks: merge` hold names this wave as waiting or `lock.md` is held by another wave, and blocks `eval-dataset push` / `push-all` while the matching `lock-dataset-<D>.md` is held by another wave |
 
 `guard` fails open: an internal error is printed to stderr and the command proceeds.
 
