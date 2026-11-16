@@ -125,7 +125,9 @@ like any other. Yourself:
 - Remove the wave's section from `backlog.md` and correct any other entry whose shape this wave changed.
 - Fix the specific documentation claims this wave made false.
 - Archive the session plan to `docs/history/` per `CLAUDE.md`'s "Plan history archiving".
-- `CHANGELOG.md`, only in the wave that releases the package; others file a `notice`.
+- `CHANGELOG.md`, only in the wave that releases the package; others file a `notice`. The entry goes
+  under `## [Unreleased]`, and no file names the new version yet (no pin, lock file, backlog or history
+  line): the version is the next one after whatever is on `main` at Integrate, which no plan can know.
 
 ## 5. Verification
 
@@ -149,7 +151,7 @@ The wave may integrate only when every row holds, each with its evidence:
 | Documentation upkeep done | The files rewritten |
 | `backlog.md` updated | Yes or not applicable |
 | Plan archived in `docs/history/` with its index line | The file name |
-| `CHANGELOG.md` entry, if this wave releases a package | Yes or not applicable |
+| `CHANGELOG.md` entry under `## [Unreleased]`, if this wave releases a package | Yes or not applicable |
 
 A failing check sends the wave back to Implement, under the escalation rule.
 
@@ -165,9 +167,13 @@ Commit messages follow `instructions.md`'s "Commit messages", passed with `-m`, 
 3. **Rebase** on the current `origin/main`. Conflicts in `backlog.md` (renumbering) and
    `docs/history/index.md` are mechanical; other conflicts follow both plans' intent, and one neither plan
    settles is a stop condition (release the lock first).
-4. **Re-verify** on the rebased branch: the verification commands; the regression run again only if
+4. **Set the version**, if this wave releases a package: the next version after the newest on the rebased
+   `main`, per SemVer. Write it into the `## [Unreleased]` heading (`## [x.y.z] - YYYY-MM-DD`), the
+   package's project file, and every pin, lock file, backlog and history line that names the release. The
+   lock makes this safe: no other wave of this repo can release in between.
+5. **Re-verify** on the rebased branch: the verification commands; the regression run again only if
    `main` brought changes that can alter the agent's behaviour.
-5. **Land it**, never with a merge commit you created:
+6. **Land it**, never with a merge commit you created:
    - `integration: pr`: push the branch (`--force-with-lease` after the rebase), create or publish the PR
      with the report as its description, wait for required checks, and complete it with rebase and
      fast-forward, using the completion command the repo's instructions name. On Azure Repos
@@ -177,7 +183,7 @@ Commit messages follow `instructions.md`'s "Commit messages", passed with `-m`, 
      `gh pr merge --rebase`. If the repository refuses that strategy, complete it with the one it allows
      and say so in the report.
    - `integration: push`: `git push origin HEAD:main`; if `main` moved, rebase again rather than merge.
-6. **After the merge:** remove the wave's `pending:` tags from its eval items (dataset lock, pull, edit,
+7. **After the merge:** remove the wave's `pending:` tags from its eval items (dataset lock, pull, edit,
    push, unlock); satisfy the holds that wait on this wave; release the lock; remove the worktree and
    delete the branch locally and on origin; delete the plan entry. A server-side rebase gives the
    commits new ids, so `git branch -d` may refuse: confirm the change is on `origin/main`, then use
