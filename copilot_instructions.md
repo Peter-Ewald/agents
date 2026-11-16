@@ -20,16 +20,23 @@ Before editing any `.md` file, read `.claude/skills/doc-conventions/SKILL.md` an
 
 ## Waves
 
-When starting or continuing a wave, read `.claude/skills/wave/SKILL.md` for the five-phase sequence (Plan → Implement → Documentation update → Verification → Commit proposal) and follow it, with these substitutions for tools Copilot doesn't have:
+Copilot runs waves **interactively only**: no worktree script, no coordination board, no background
+agents. When starting or continuing a wave, read `.claude/skills/wave/SKILL.md` and follow its phases
+(Plan, Specify, Implement, Documentation upkeep, Verification, Done check, Integrate, Report) in this one
+conversation, with these substitutions:
 
-- No `EnterPlanMode`/`ExitPlanMode` — announce "Entering planning discussion" / "Plan approved, moving to Implement" in chat instead, tying into *Phase tracking* above.
-- No `TodoWrite` or statusline — phase is only ever visible via the in-response `**Phase: X**` line, as already stated.
-- No forked subagent for the Documentation update phase — do that phase's checklist (README files, `docs/*.md`, `docs/glossary.md`, backlog tier cleanup, the `docs/history/` note, `CHANGELOG.md`) inline in the same conversation instead of spawning anything.
-- The Plan phase's `docs/history/index.md` check still applies as-is — reading a file needs no special tooling. Only the *writing* side stays unavailable, per *Plan history archiving* below.
+- No `EnterPlanMode`/`ExitPlanMode` — announce "Entering planning discussion" / "Plan approved, moving to
+  Specify" in chat instead, tying into *Phase tracking* above.
+- No subagents — write the Specify phase's failing tests yourself, before any implementation, and do every
+  sub-task inline. Keep the tests frozen once the user has seen them fail.
+- No shell — give the done check's and Integrate's commands as code blocks for the user to run, and wait
+  for their results before moving on.
+- The Plan phase's `docs/history/index.md` check still applies as-is. Only the *writing* side stays
+  unavailable, per *Plan history archiving* below.
 
 ## Documentation sweep
 
-When asked to "update documentation" without further scope, read `.claude/agents/doc-sweep.md` and follow its checklist directly in the current conversation — same content, no subagent to spawn.
+When asked to "update documentation" without further scope, read `.claude/agents/doc-sweep.md` and follow its checklist directly in the current conversation — same content, no subagent to spawn. Propose the fixes before applying them.
 
 ## Linting, dependencies, changelog ordering
 

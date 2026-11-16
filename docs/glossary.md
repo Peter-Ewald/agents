@@ -7,9 +7,106 @@ design.
 ## Wave
 
 One coherent slice of change that lands as a single completed objective, not a single commit. Every wave
-runs through five phases in order: Plan, Implement, Documentation update, Verification, Commit message
-proposal. See [`../instructions.md`](../instructions.md#implementation-waves) for the full definition and
+runs in its own worktree through eight phases in order: Plan, Specify, Implement, Documentation upkeep,
+Verification, Done check, Integrate, Report. See
+[`../instructions.md`](../instructions.md#implementation-waves) for the full definition and
 [`00-agents-overview.md`](00-agents-overview.md) for how the phases map onto this harness's mechanisms.
+
+## Batch wave
+
+The default kind of wave. It is planned with you in plan mode, filed on the coordination board as `ready`,
+and then run in the background by a wave runner that the coordinator starts. It asks you nothing directly:
+a stop condition ends it with a `blocked` report and one question.
+
+## Interactive wave
+
+A wave you ask to run in the planning session itself ("run wave 12 interactively"). It is filed on the
+board as `running`, follows the same phases, done check and report as a batch wave, and asks you its
+questions directly in that session.
+
+## Sweep wave
+
+A documentation sweep run as its own wave: a backlog entry whose plan names the scope and what to check.
+The `doc-sweep` agent replaces the Specify and Implement phases and applies its fixes directly, because the
+approved plan is the confirmation. No other wave runs a sweep.
+
+## Acceptance case
+
+One row of a wave's plan that says, in words and data you can check without reading code, what must be
+true afterwards: the behaviour, a given situation, an action and the expected outcome, and how it is
+checked (unit test, integration test or an eval item). A documentation or sweep wave has none.
+
+## Tests-first commit
+
+The first commit of a wave, made in the Specify phase: the tests that `test-author` wrote from the
+acceptance cases, failing for the reason each case states, before any implementation exists. Its SHA is
+recorded in the plan entry.
+
+## Frozen test
+
+A test or eval item written in the Specify phase that implementers may not change. An implementer who
+believes one is wrong reports `blocked`. The done check lists any change to a frozen test with its reason.
+
+## Tier
+
+One of three implementer levels, `light` (Haiku), `medium` (Sonnet) and `strong` (Opus). A plan's sub-task
+table names the tier per row; the cheapest tier that can do the sub-task well is chosen, and a failed
+attempt is retried once, one tier up. See `wave/tiers.md`.
+
+## Wave runner
+
+The `wave-runner` subagent: the wave agent of one batch wave, running in the background from Specify to
+Report. Briefed with a handover instead, it runs only the Integrate phase of a parked wave.
+
+## Coordinator
+
+The one long-lived session (`claude --name coordinator`, then `/coordinate`) that starts ready waves as
+wave runners, at most two at once, relays their questions to you, wakes parked waves and keeps plan
+statuses true. It never edits code or merges.
+
+## Coordination board
+
+The files under `~/.claude/coordination/`, one folder per repo, holding the rules between waves that must
+outlast a session: plan entries, holds, requests, notices and locks. Read and written through `board.py`.
+See [`05-parallel-waves.md`](05-parallel-waves.md).
+
+## Plan entry
+
+The board entry for one approved wave: its plan as approved, its mode (batch or interactive), status
+(`ready`, `running`, `waiting`, `blocked`, `interrupted`), holds, exclusive resources and approved new
+dependencies. Removed after the wave's merge.
+
+## Hold
+
+A "not before" rule between two waves on the board. A `start` hold keeps the waiting wave from starting
+until the other wave's condition is true; a `merge` hold lets it run up to the done check but not integrate.
+
+## Parked wave
+
+A wave with status `waiting`: it finished its done check but an open `merge` hold keeps it from
+integrating. Its branch is pushed (as a draft PR where PRs are used) and a handover is stored in its plan
+entry; it costs nothing while parked.
+
+## Handover
+
+The section appended to a parked wave's plan entry (branch, worktree, PR, what integration still needs, the
+report so far) that lets a fresh wave runner finish the Integrate phase without the parked wave's context.
+
+## Integration lock
+
+The board lock a wave holds from its rebase to its merge, so integration is serial per repo. While another
+wave holds it, pushing `main` or completing a pull request is blocked.
+
+## Dataset lock
+
+The board lock a wave holds for one pull, merge and push of a Langfuse dev dataset, so parallel waves never
+overwrite each other's items.
+
+## Done check
+
+The table every wave passes before it integrates: each row (acceptance cases, frozen tests unchanged,
+verification, eval results, documentation, backlog, history, changelog) needs its evidence. It replaces an
+approval of the commit.
 
 ## Backlog
 
@@ -54,17 +151,17 @@ than always-on `CLAUDE.md` prose.
 A separate Claude instance, defined by a markdown file under `.claude/agents/`, with its own system prompt
 and (optionally) a restricted tool set. Invoked automatically when its `description` matches, or
 explicitly. Starts with a fresh context unless it's a **fork** (below). See
-[`02-skills-and-subagents.md`](02-skills-and-subagents.md) for the two subagents this harness defines.
+[`02-skills-and-subagents.md`](02-skills-and-subagents.md) for the subagents this harness defines.
 
 ## Fork
 
-A subagent that inherits the **full conversation transcript** of whatever spawned it — not just its
-system prompt or model — so it already knows everything discussed or implemented so far. Cheaper than a
-fresh subagent for tasks that need that context, since it reuses the parent's prompt cache. Used for the
-end-of-wave documentation update (needs to know what was just built), not for the ad hoc `doc-sweep`
-(deliberately wants a fresh, no-context read of the repo instead). Requires
-`CLAUDE_CODE_FORK_SUBAGENT=1` — set in `~/.claude/settings.json`'s `env` block (see [`CLAUDE.md`](../CLAUDE.md)) —
-without it, spawning a fork fails outright rather than falling back gracefully.
+A subagent that inherits the **full conversation transcript** of whatever spawned it, not just its
+system prompt or model, so it already knows everything discussed so far. Cheaper than a fresh subagent for
+tasks that need that context, since it reuses the parent's prompt cache. The `langfuse-upgrade` skill uses
+one for its investigation. Wave work does not: implementers, `test-author` and `doc-sweep` start fresh
+with a self-contained brief. Requires `CLAUDE_CODE_FORK_SUBAGENT=1`, set in `~/.claude/settings.json`'s
+`env` block (see [`CLAUDE.md`](../CLAUDE.md)); without it, spawning a fork fails outright rather than
+falling back gracefully.
 
 ## Skill freshness
 
@@ -99,7 +196,8 @@ The span from one handoff to the next: a new user prompt, or a new subagent task
 back. The [web search cap](01-hooks.md#limit-web-searchpy) resets once per round, so a 10-search budget
 applies per round, not per session.
 
-## Doc-conventions / doc-sweep / ruff-cleanup / design-conventions / sdk-release
+## Skills and subagents of the wave loop
 
-Five of the skill/subagent pieces this harness currently ships (alongside `wave`). See
+`wave`, `coordinate`, `implementer-contract`, the three implementer tiers, `test-author`, `wave-runner` and
+`doc-sweep`, alongside `doc-conventions`, `design-conventions`, `ruff-cleanup` and `sdk-release`. See
 [`02-skills-and-subagents.md`](02-skills-and-subagents.md) for what each one does.

@@ -9,7 +9,7 @@ This page is the map; the other numbered docs go deep on one piece each.
 Prose instructions have two failure modes: the model has to remember to follow them, and every repo that
 wants the same behavior needs its own copy. This harness addresses both:
 
-- **Reliability** comes from moving rules to the mechanism that actually enforces them — a permission
+- **Reliability** comes from moving rules to the mechanism that actually enforces them: a permission
   boundary (plan mode) instead of a verbal convention, a hook instead of a rule the model has to recall, a
   skill that loads its full content only when relevant instead of competing for attention the whole
   session.
@@ -19,58 +19,89 @@ wants the same behavior needs its own copy. This harness addresses both:
 
 ## The pieces, and how a wave uses them
 
+A wave runs in its own worktree and passes through eight phases. The plan is written with you in plan mode;
+everything after approval runs without asking, and the done check replaces any approval of the result.
+
 ```mermaid
 graph TD
-  H0["docs/history/index.md"] -.->|"checked before"| A["Plan mode"]
+  H0["docs/history/index.md"] -.->|"checked before"| A["Plan"]
   DC["design-conventions skill"] -.->|"checked before finalizing"| A
-  A --> B["Implement"]
-  B --> C["Documentation update"]
+  A --> SP["Specify"]
+  SP --> B["Implement"]
+  B --> C["Documentation upkeep"]
   C --> D["Verification"]
-  D --> E["Commit proposal"]
+  D --> DN["Done check"]
+  DN --> IN["Integrate"]
+  IN --> R["Report"]
 
   A -.->|"enforced by"| PM["EnterPlanMode / ExitPlanMode"]
+  A -.->|"files the plan on"| BD["Coordination board"]
+  SP -.->|"delegated to"| TA["test-author"]
+  B -.->|"delegated to"| IM["implementer-light / -medium / -strong"]
   B -.->|"checked by"| H1["flag-new-dependency.py<br/>ruff-autofix.py<br/>lint-changed-lines.py"]
   C -.->|"applies"| S1["doc-conventions skill"]
   C -.->|"archives to"| H3["docs/history/"]
-  D -.->|"runs as a step, then"| H2["require-changelog-before-commit.py"]
+  IN -.->|"guarded by"| H2["coordination-guard.py<br/>require-changelog-before-commit.py"]
+  IN -.->|"takes the lock on"| BD
 
   style PM fill:#5588cc,stroke:#5588cc,stroke-width:2px
   style H1 fill:#cc8844,stroke:#cc8844,stroke-width:2px
+  style H2 fill:#cc8844,stroke:#cc8844,stroke-width:2px
   style S1 fill:#55aa77,stroke:#55aa77,stroke-width:2px
   style DC fill:#55aa77,stroke:#55aa77,stroke-width:2px
-  style H2 fill:#cc8844,stroke:#cc8844,stroke-width:2px
+  style TA fill:#9966cc,stroke:#9966cc,stroke-width:2px
+  style IM fill:#9966cc,stroke:#9966cc,stroke-width:2px
+  style BD fill:#888888,stroke:#888888,stroke-width:2px
   style H0 fill:#999999,stroke:#888888,stroke-width:2px
   style H3 fill:#999999,stroke:#888888,stroke-width:2px
 ```
 
-Blue is a permission boundary, orange is a hook, green is a skill, gray is a plain file check with no
-mechanism enforcing it yet (see below) — see the [glossary](glossary.md) if those terms are new. Each wave
-phase is backed by a different kind of mechanism, chosen for how reliably that phase's rule needs to hold:
+Blue is a permission boundary, orange is a hook, green is a skill, purple is a subagent, gray is the board
+or a plain file check with no mechanism enforcing it yet. See the [glossary](glossary.md) if those terms
+are new. Each phase is backed by the kind of mechanism its rule needs:
 
 | Phase | Mechanism | Why this one |
 |---|---|---|
-| Plan | Plan mode, after checking `docs/history/index.md` and the `design-conventions` skill | Needs to be a hard permission boundary — the whole point is that the final concrete plan can be revised before anything is touched, once discussion has already converged in normal mode, without relying on the model remembering not to edit yet. Both checks are prose-level (no hook fires on "should I check history/design first"), but happen before the boundary is entered so they can shape the plan. `design-conventions` is invoked fresh via the Skill tool each time — see `CLAUDE.md`'s "Skill freshness" note. |
-| Implement | Hooks (`flag-new-dependency`, `ruff-autofix`, `lint-changed-lines`) | Fully mechanical checks (is this a new dependency? does this line lint? can it be auto-fixed?) that should fire every time, not just when remembered. |
-| Documentation update | `doc-conventions` skill, applied via a forked agent, plus archiving the concluded session plan to `docs/history/` | Needs the full conversation's context of what was just built, so a fork (requires `CLAUDE_CODE_FORK_SUBAGENT=1`, set in `~/.claude/settings.json`); the conventions themselves live in a skill so they load in full only when a `.md` file is actually being touched. Archiving reuses the same pass since it's the same "wrap up what this wave produced" work. |
-| Verification | A step (main agent runs tests directly), plus a hook for changelog ordering | Judgment (is this failure pre-existing or new?) can't be a hook, so it stays a step; the changelog-before-commit check is pure mechanics, so that part is a hook. |
-| Commit proposal | Normal chat proposal | No new mechanism needed — drafting a message and waiting for confirmation is already reliable as prose. |
+| Plan | Plan mode, after checking `docs/history/index.md` and the `design-conventions` skill | A hard permission boundary, so the concrete plan can be revised before anything is touched. The plan carries acceptance cases, a sub-task table with a tier per row, and board fields. Both checks are prose-level and happen before the boundary is entered so they can shape the plan. On approval the plan is filed on the [coordination board](05-parallel-waves.md). |
+| Specify | `test-author` subagent | The tests that define "done" are written by an agent that does not write the code, so a test cannot be bent to fit an implementation. Their commit is the tests-first commit; from then on the tests are frozen. |
+| Implement | `implementer-light`, `-medium`, `-strong`, plus hooks (`flag-new-dependency`, `ruff-autofix`, `lint-changed-lines`) | Scoped execution runs on the cheapest tier that can do it well; the wave agent keeps the judgment and reviews each diff. The hooks are mechanical checks that fire on every edit. |
+| Documentation upkeep | `doc-conventions` skill, applied by the wave agent and its implementers, plus archiving the session plan to `docs/history/` | Scoped to what the wave made wrong. A documentation sweep is its own wave (`doc-sweep`), never part of another wave. |
+| Verification | A step: the wave agent runs the tests itself | Judging whether a failure is pre-existing or new needs the Implement context, so it is not a hook or a subagent. |
+| Done check | A table in the `wave` skill: every row needs its evidence | The one gate before integration. It replaces an approval of the commit. |
+| Integrate | `board.py` integration lock, `coordination-guard.py` | Integration is serial per repo and respects holds; the guard blocks a push or PR completion while another wave holds the lock or a merge hold is open. |
+| Report | The report format in the `wave` skill | One fixed report per wave, which becomes the pull request description. |
 
-`docs/history/` and its use in Plan/Documentation update are prose-level (no hook enforces either side yet)
-— see `instructions.md`'s *Plan history* section for the convention and its known reliability gap (nothing
+`docs/history/` and its use in Plan and Documentation upkeep are prose-level: no hook enforces either side.
+See `instructions.md`'s *Plan history* section for the convention and its known reliability gap (nothing
 catches a plan abandoned without the agent remembering to archive it).
 
-The `wave` skill ([`02-skills-and-subagents.md`](02-skills-and-subagents.md)) is what actually drives an
-agent through these five phases end-to-end, but every mechanism above also works standalone — a hook fires
-whether or not `wave` is the thing that triggered the edit it's checking.
+## Who runs a wave
+
+| Piece | Role |
+|---|---|
+| Planning chat | You and an agent in plan mode. Each approved plan is filed on the board as `ready`. "Run wave N interactively" keeps that wave in the same session instead. |
+| Coordinator | One long-lived session (`/coordinate`, started in `~/Projects`). It starts `ready` waves as background wave runners, at most two at once, relays their questions to you and wakes parked waves. |
+| `wave-runner` | The wave agent of one batch wave, running the `wave` skill from Specify to Report in the wave's worktree. |
+| Coordination board | The files under `~/.claude/coordination/` that hold plans, holds, locks, requests and notices, managed through `board.py`. |
+
+The `wave` skill ([`02-skills-and-subagents.md`](02-skills-and-subagents.md)) drives an agent through the
+phases, and every mechanism above also works standalone: a hook fires whether or not `wave` triggered the
+edit it is checking. The board, holds, parking and the coordinator are described in
+[`05-parallel-waves.md`](05-parallel-waves.md).
 
 ## Reading further
 
-- [`01-hooks.md`](01-hooks.md) — every hook, what event triggers it, what it checks, and how to test it
+- [`01-hooks.md`](01-hooks.md): every hook, what event triggers it, what it checks, and how to test it
   standalone.
-- [`02-skills-and-subagents.md`](02-skills-and-subagents.md) — `wave`, `doc-conventions`, `doc-sweep`,
-  `design-conventions`, `ruff-cleanup`, `sdk-release`, `langfuse-upgrade`, the `semeval-*` skills.
-- [`03-cross-repo-distribution.md`](03-cross-repo-distribution.md) — how the symlink setup works, and the
+- [`02-skills-and-subagents.md`](02-skills-and-subagents.md): `wave`, `coordinate`,
+  `implementer-contract`, the implementer tiers, `test-author`, `wave-runner`, `doc-sweep`,
+  `doc-conventions`, `design-conventions`, `ruff-cleanup`, `sdk-release`, `langfuse-upgrade`, the
+  `semeval-*` skills.
+- [`03-cross-repo-distribution.md`](03-cross-repo-distribution.md): how the symlink setup works, and the
   gotchas it ran into.
-- [`04-working-with-the-harness.md`](04-working-with-the-harness.md) — the experience of using this day
-  to day: the interactive loop, how skills activate, and what it standardizes across a team.
-- [`glossary.md`](glossary.md) — terms used across all of these.
+- [`04-working-with-the-harness.md`](04-working-with-the-harness.md): the experience of using this day
+  to day: the planning chat, the coordinator chat, how skills activate, and what it standardizes across a
+  team.
+- [`05-parallel-waves.md`](05-parallel-waves.md): the coordination board, wave lifecycle, holds, parking,
+  the coordinator and integration.
+- [`glossary.md`](glossary.md): terms used across all of these.

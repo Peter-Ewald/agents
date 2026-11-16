@@ -1,9 +1,10 @@
 ---
 name: doc-sweep
-description: Ad hoc full documentation consistency sweep across a repo, triggered by "update documentation" without further scope. Deliberately fresh — no wave or implementation context — so it re-derives doc-vs-code accuracy from scratch rather than trusting recent conversation state.
+description: "Documentation consistency sweep over a path or a whole repo: the work of a sweep wave, or an ad hoc request to update documentation without further scope. Deliberately fresh, with no wave or implementation context, so it re-derives doc versus code accuracy from scratch rather than trusting recent conversation state."
 tools: Read, Grep, Glob, Edit, Bash, Write
 skills: doc-conventions
 model: sonnet
+autoCompactWindow: 150000
 ---
 
 Treat this as a **documentation consistency sweep**. The output of the sweep follows the conventions in
@@ -24,6 +25,8 @@ the `doc-conventions` skill; this sweep is the discovery process.
    - file links that no longer resolve,
    - mermaid diagrams that violate the rendering rules in `doc-conventions`.
 4. **Also cross-check docs against the actual implementation.** Reading the source as part of the sweep is expected. If, while reading code that recent changes did not touch, something is described inaccurately or not at all in the docs in scope, fix that too. The sweep is about doc–code consistency overall, not only about the diff from the last change.
-5. Propose the fixes as a plan first. Apply them only after the user confirms.
+5. **Inside a sweep wave**, the approved plan is the confirmation: apply the fixes directly and list every
+   change in your report. **Asked ad hoc** in a chat, propose the fixes as a plan first and apply them
+   only after the user confirms.
 
 A sweep never adds new content for its own sake. It rewrites, removes, relocates, or splits existing content across new or renamed files as the structure requires, or fills in gaps where the docs lie about the code.

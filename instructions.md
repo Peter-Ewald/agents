@@ -33,13 +33,35 @@ Non-trivial work is organised into **waves**. A wave is one coherent slice of ch
 
 Every wave runs through fixed phases in order:
 
-1. **Plan** — before any code change, write a detailed plan to the session plan (see your tool's adapter file for exactly where this lives). The plan names every file to touch, every verification step, and the wave's exit criteria, and splits the work into sub-tasks, each with the files it owns and the check that proves it done. Before finalizing the approach, invoke the `design-conventions` skill fresh (see your tool's adapter file's "Skill freshness" note) and check the plan against it. Track the current phase explicitly throughout the work — see your tool's adapter file for the mechanism.
-2. **Implement** — code, config, fixtures, tests.
-3. **Documentation upkeep** — first-class part of the wave, not a follow-up, but scoped to what the wave actually changed rather than to `docs/` as a whole. See *Documentation update phase* below.
-4. **Verification** — run the test suites and any smoke commands listed in the plan. Distinguish failures caused by this wave from pre-existing failures, and call the pre-existing ones out by name when reporting.
-5. **Commit message proposal** — for a larger landing (e.g. all of Wave 2, not just sub-wave 2.1) automatically draft a commit message at the end. See *Commit messages* below.
+1. **Plan** — before any code change, write a detailed plan to the session plan (see your tool's adapter file for exactly where this lives). The plan names every file to touch, every verification step, the wave's exit criteria and its **acceptance cases** (see *Tests first*), and splits the work into sub-tasks, each with the files it owns and the check that proves it done. Before finalizing the approach, invoke the `design-conventions` skill fresh (see your tool's adapter file's "Skill freshness" note) and check the plan against it. Approving the plan is the approval for everything after it, up to the merge. Track the current phase explicitly throughout the work — see your tool's adapter file for the mechanism.
+2. **Specify** — the acceptance cases become failing tests and eval items, written by an agent that does not implement them, and are committed as the wave's first commit. See *Tests first*.
+3. **Implement** — code, config, fixtures, until the frozen tests pass.
+4. **Documentation upkeep** — first-class part of the wave, not a follow-up, but scoped to what the wave actually changed rather than to `docs/` as a whole. See *Documentation update phase* below.
+5. **Verification** — run the test suites, the regression run for an LLM agent, and any smoke commands listed in the plan. Distinguish failures caused by this wave from pre-existing failures, and call the pre-existing ones out by name when reporting.
+6. **Done check** — every acceptance case passes, the frozen tests and eval items are unchanged (or each change is listed with its reason), verification passed, documentation upkeep, `backlog.md`, the plan archive and any `CHANGELOG.md` entry are done. A failing check sends the wave back to Implement.
+7. **Integrate** — rebase on the current `main`, re-verify, and land the change with its commit message (see *Commit messages* below); then report. See *Worktrees and integration*.
 
-Mark a wave done only after verification passes.
+Mark a wave done only after the done check passes. Nobody approves the commit, push or PR separately: the plan approval and the done check together replace that.
+
+## Tests first
+
+The tests are what the plan's approval relies on, so the expected behaviour is fixed **before** implementation, by agents that do not write the code:
+
+| Role | Writes |
+|---|---|
+| Planning, with me | **Acceptance cases** in the plan: for each behaviour the situation, the action and the expected outcome, in words and data I can check. For an LLM agent, the eval item's input and expected output |
+| A test author, not the implementer | The cases as unit or integration tests and as eval items. Each test must fail, for the reason the case states, before any implementation exists |
+| Implementers | Code until the tests pass. They may add tests for details they introduce |
+
+The committed tests (the **tests-first commit**) and the eval items are then **frozen**: an implementer who believes one is wrong stops and asks. Eval items live in the dev dataset in Langfuse, the single source of truth: they are pushed right after they are written, tagged as pending for their wave until it merges, and not run until the behaviour exists. Every push pulls the dataset first and merges what changed in Langfuse since, so parallel waves never overwrite each other.
+
+Documentation and sweep waves have no acceptance cases; a refactor that keeps behaviour uses the existing suite; an experiment measures rather than asserts. The plan says which applies.
+
+## Worktrees and integration
+
+- Every wave runs in its own git worktree on a branch `wave-<NN>-<slug>`, so several waves run at the same time without touching each other's files.
+- History on `main` stays linear: rebase and fast-forward, never a merge commit created by a wave. A repo with a branch policy integrates through a pull request; a repo whose instructions carry an `Integration: push` line pushes `main` directly.
+- Integration is serial per repo: a wave holds the repo's integration lock from its rebase to its merge. Dependencies between waves are explicit **holds** ("may not start" or "may not merge before"), never a planned order.
 
 ## Plan files: lifetime and purpose
 
@@ -139,7 +161,7 @@ still describes this release's change, not a replay of earlier rejected approach
 
 ## Documentation update phase
 
-Every wave finishes with documentation upkeep. Not optional, not a follow-up task — part of the wave's definition of done. All rewrites follow the `doc-conventions` skill (terminology, glossary placement, markdown/mermaid rules, and the native rewrite check).
+Every wave includes documentation upkeep. Not optional, not a follow-up task — part of the wave's definition of done. All rewrites follow the `doc-conventions` skill (terminology, glossary placement, markdown/mermaid rules, and the native rewrite check).
 
 **Upkeep is scoped to what this wave made wrong.** It always covers:
 
@@ -149,10 +171,6 @@ Every wave finishes with documentation upkeep. Not optional, not a follow-up tas
 - **`docs/history/`** — archive this wave's session plan (see *Plan history* above) and append its line to
   `docs/history/index.md`. A dropped plan is archived earlier, in the Plan phase, not here — see *Plan
   history* for why.
-
-**A full sweep of `docs/` is not part of a wave by default** — re-deriving every document per wave is expensive, and while a planned sequence is still in progress it rewrites transitional descriptions into successively less wrong states instead of once, correctly, at the end. A sweep covers what upkeep does not: `docs/*.md` read as wholes rather than claim by claim, and `docs/glossary.md` in each affected scope — new terms added, retired ones removed, drifted definitions corrected.
-
-**`backlog.md` decides when a sweep happens, and overrides this default.** A repo may sequence documentation as **its own wave**, or name a sweep inside **one wave's own definition**; either way only that wave runs it, and it is the one place a fork is warranted (see *choosing the mechanism* below). Where the backlog says nothing, do the upkeep, then say in chat that no sweep was run and what one would still owe.
 - **`CHANGELOG.md`** if the wave ships a released package — one entry under the new version, written for future users of the package, not for me. Check `docs/history/index.md` for the plan(s) behind this release and ground the narrative paragraph in the documented intent rather than re-deriving it from the diff alone. Use this structure:
 
   ```markdown
@@ -175,6 +193,10 @@ Every wave finishes with documentation upkeep. Not optional, not a follow-up tas
 
   Omit sections that have no entries. The narrative paragraph is required when the version introduces a meaningful feature or a non-obvious breaking change; it is optional for patch releases that are purely bug fixes. Write the narrative from the user's perspective ("pods can now limit…"), not from the implementation's perspective ("added a `sample_rate` parameter to…").
 
+**A wave never runs a full sweep of `docs/`** — re-deriving every document per wave is expensive, and while a planned sequence is still in progress it rewrites transitional descriptions into successively less wrong states instead of once, correctly, at the end. A sweep covers what upkeep does not: `docs/*.md` read as wholes rather than claim by claim, and `docs/glossary.md` in each affected scope — new terms added, retired ones removed, drifted definitions corrected.
+
+**A sweep is its own wave**, a *sweep wave*: a backlog entry with a plan that names the scope (a path or the whole repo). It runs like any wave, with the sweep in place of Specify and Implement. Propose one when a sequence of waves in one area ends, or when the backlog names one.
+
 No "Migration notes" sections in repo docs unless I explicitly ask. Backward-compat shims are not preserved, so migration notes describe nothing.
 
 ## Commit messages
@@ -191,7 +213,7 @@ For trivial single-purpose changes, a one-line imperative commit message is enou
 - …
 ```
 
-Don't make lines longer than 95 characters. Bullets are grouped by file or folder, whichever keeps the message readable. Avoid one bullet per line of diff. No `Co-Authored-By` trailers. Propose the commit message text before it is committed, and only proceed after confirmation — see your tool's adapter file for the exact mechanism.
+Don't make lines longer than 95 characters. Bullets are grouped by file or folder, whichever keeps the message readable. Avoid one bullet per line of diff. No `Co-Authored-By` trailers. Inside a wave the wave agent writes and commits the message itself; outside a wave, propose it first and commit after confirmation.
 
 ## No new dependencies without flagging
 
@@ -202,14 +224,10 @@ Adding a third-party dependency is a decision, not a side effect of implementati
 Three shapes, chosen by scope — not interchangeable, each exists for a specific reason:
 
 - **Small, user-scoped edit** ("update the README to mention X") — the main agent does it inline,
-  directly. No subagent: the edit is narrow enough that the current conversation's context is enough,
-  and forking or a fresh read would only add overhead.
-- **A wave's routine documentation upkeep** — the main agent does it inline. This is the default for every
-  wave: the scope is what that wave changed, and the conversation already holds it.
-- **The documentation sweep a backlog assigns to one specific wave** — a **forked** agent (inherits the
-  full conversation, so it knows exactly what the preceding waves built) — see the `wave` skill's Phase 3.
-  Only for the wave the backlog names, never for every wave.
-- **A full consistency sweep** — the bare phrase "update documentation" with no further scope, or an
-  explicit request for a full sweep — invokes the `doc-sweep` subagent, deliberately **fresh** (no
-  inherited context), because it needs to re-derive doc-vs-code accuracy from scratch rather than trust
-  what the conversation currently believes.
+  directly. No subagent: the edit is narrow enough that the current conversation's context is enough.
+- **A wave's routine documentation upkeep** — inside the wave, scoped to what that wave changed.
+- **A documentation sweep** — the bare phrase "update documentation" with no further scope, an explicit
+  request for a sweep, or a sweep wave — the `doc-sweep` subagent, deliberately **fresh** (no inherited
+  context), because it needs to re-derive doc-vs-code accuracy from scratch rather than trust what the
+  conversation currently believes. Asked ad hoc it proposes its fixes first; in a sweep wave the approved
+  plan is the confirmation.

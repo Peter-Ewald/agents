@@ -1,32 +1,77 @@
 # Skills and subagents
 
-Several pieces, each chosen for a different reason — see [glossary.md](glossary.md) for what
-distinguishes a skill from a subagent from a fork.
+Several pieces, each chosen for a different reason. See [glossary.md](glossary.md) for what
+distinguishes a skill from a subagent.
 
 ## `wave` (skill)
 
 [`../.claude/skills/wave/SKILL.md`](../.claude/skills/wave/SKILL.md)
 
-Drives a wave from `backlog.md`'s Next Up tier through instructions.md's five phases end-to-end: plan, implement,
-documentation update, verification, commit proposal. The main agent keeps the judgment — plan, contracts
-between sub-tasks, review, verification, backlog and history, commit — and hands each scoped sub-task in
-the plan's sub-task table to the `implementer` subagent below. Only a documentation sweep the backlog
-assigns to that specific wave spins off a fork, for the reason `doc-sweep` below explains (needs full
-conversation context, unlike `doc-sweep`'s deliberate freshness). Forking requires
-`CLAUDE_CODE_FORK_SUBAGENT=1` — set in `~/.claude/settings.json`'s `env` block; without it,
-`Agent(subagent_type="fork")` fails outright ("Agent type 'fork' not found"), confirmed by direct testing.
-At each phase transition it overwrites `/tmp/claude-wave-phase-${CLAUDE_SESSION_ID}`, which
-the statusline script reads to show the current phase. That path — not the session's own scratchpad
-directory — is deliberate: the statusline runs as a separate process that only receives a session ID on
-its own stdin, not this session's scratchpad path, so the hand-off point has to be something derivable
-from the session ID alone.
+Drives a wave from `backlog.md`'s Next Up tier through the phases of `instructions.md`'s Implementation
+Waves section: Plan, Specify, Implement, Documentation upkeep, Verification, Done check, Integrate, Report.
+Every wave runs in its own worktree on a branch `wave-<NN>-<slug>`, created by
+`new-wave-worktree.sh` from the current `origin/main`.
 
-Before writing the session plan (Phase 1), it checks `docs/history/index.md` for prior plans on a related
-topic, so it doesn't re-propose a direction already tried and dropped — and if the plan itself gets dropped
-instead of approved, it's archived right there in Phase 1, not left to a Documentation update phase it will
-never reach. A plan that *does* get approved and completed is archived at Phase 3 instead, alongside the
-rest of the Documentation update checklist. See `instructions.md`'s *Plan history* section for the
-convention.
+| Supporting file | Holds |
+|---|---|
+| [`tiers.md`](../.claude/skills/wave/tiers.md) | The implementer tiers, which task types map to which, the escalation rule |
+| [`board.md`](../.claude/skills/wave/board.md) | Board entry formats, holds, locks, parking and the handover |
+| [`report.md`](../.claude/skills/wave/report.md) | The wave report |
+
+**Batch and interactive.** A wave is a batch wave unless you say "run wave N interactively". Both plan in
+plan mode with you. A batch wave is then filed on the board as `ready` and the coordinator starts a
+`wave-runner` for it; an interactive wave is filed as `running` and the planning session runs it, asking
+you its questions directly. Both follow the same phases and neither asks for approval before a commit,
+push or pull request: the done check replaces it.
+
+**Plan.** Checks `docs/history/index.md` for prior plans on a related topic, writes the session plan with
+acceptance cases (one row per behaviour: given, when, then, checked by), a sub-task table (owned files,
+dependencies, acceptance check, `Runs as` tier) and the board fields (holds, exclusive resources, approved
+new dependencies, `integration`), and checks it against `design-conventions`. On approval the plan is filed
+on the board. A plan dropped instead of approved is archived right there with outcome `dropped`.
+
+**Specify.** `test-author` turns the acceptance cases into failing tests and eval items. The wave agent
+checks each against its case and commits the tests as the tests-first commit; from then on they are
+frozen. Eval items go to the dev dataset tagged `pending:<repo>/<wave key>` and are not run.
+
+**Implement.** The wave agent briefs one `implementer-<tier>` per sub-task and reviews every diff itself.
+A correction or a `blocked` report moves the sub-task one tier up, once.
+
+**Documentation upkeep.** Scoped to what the wave made wrong: the wave's `backlog.md` section, false
+claims in docs, the archived plan in `docs/history/`. A wave never runs a documentation sweep; that is a
+sweep wave (see `doc-sweep`).
+
+**Verification and done check.** Verification runs in the wave agent. The done check is a table of rows
+(acceptance cases, frozen tests unchanged, verification, eval results, documentation, backlog, history,
+changelog), each needing evidence; a failing row sends the wave back to Implement.
+
+**Integrate and report.** Parks on an open merge hold, otherwise takes the integration lock, rebases,
+re-verifies and lands the wave by rebase and fast-forward: a pull request for `integration: pr`, a direct
+push of `main` for `integration: push`. Afterwards it removes its `pending:` tags (under the dataset lock),
+satisfies the holds waiting on it, releases the lock and deletes the worktree and branch. The report goes
+into the pull request description. See [`05-parallel-waves.md`](05-parallel-waves.md) for the board,
+holds, parking and the coordinator.
+
+At each phase transition the skill overwrites `/tmp/claude-wave-phase-${CLAUDE_SESSION_ID}`, which the
+statusline script reads to show the current phase. That path, not the session's own scratchpad directory,
+is deliberate: the statusline runs as a separate process that only receives a session ID on its own stdin,
+so the hand-off point has to be derivable from the session ID alone.
+
+Before writing the plan it checks `docs/history/index.md` so it does not re-propose a direction already
+tried and dropped. A completed plan is archived in Documentation upkeep. See `instructions.md`'s *Plan
+history* section for the convention.
+
+## `coordinate` (skill)
+
+[`../.claude/skills/coordinate/SKILL.md`](../.claude/skills/coordinate/SKILL.md)
+
+Turns a session into the coordinator: the one long-lived session, started in `~/Projects` with
+`claude --name coordinator` and then `/coordinate`, that works through the coordination board across all
+repos. It starts `ready` plans as background `wave-runner` agents (at most two at once, respecting start
+holds and exclusive resources), relays a blocked wave's question to you and passes your answer back, wakes
+parked waves by starting a fresh `wave-runner` on their handover once the hold is satisfied, and rebuilds
+its state from the board after a restart. It never edits code, never merges and never answers a wave's
+question itself.
 
 ## `doc-conventions` (skill)
 
@@ -39,43 +84,74 @@ enters context when a markdown edit is actually happening, instead of competing 
 session regardless of whether any docs are being touched — and it's the single definition both `doc-sweep`
 (below) and the eventual `/wave` documentation phase apply, rather than two competing copies.
 
-## `implementer` (subagent)
+## Implementer tiers and `implementer-contract`
 
-[`../.claude/agents/implementer.md`](../.claude/agents/implementer.md)
+[`../.claude/agents/implementer-light.md`](../.claude/agents/implementer-light.md),
+[`implementer-medium.md`](../.claude/agents/implementer-medium.md),
+[`implementer-strong.md`](../.claude/agents/implementer-strong.md),
+[`../.claude/skills/implementer-contract/SKILL.md`](../.claude/skills/implementer-contract/SKILL.md)
 
-Carries out one sub-task from an approved wave plan: the files it owns, the contract the plan fixed, and
-the acceptance check that proves it. Runs on Sonnet at medium effort with a fresh context, so the many
-edit-and-test calls of implementation re-read a small context on a cheaper model instead of the main
-agent's full conversation on Opus — the context size is the larger part of that saving. It never plans or
-widens its scope: an ambiguous contract or a needed file outside its brief is a `blocked` report, which
-sends the decision back to the main agent. The report has a fixed five-line shape with no diffs, because
-the main agent reviews the diff itself and every line of report stays in its context for the rest of the
-wave. No `Agent` tool, so it cannot delegate further.
+Each carries out one sub-task of an approved wave plan: the files it owns, the contract the plan fixed,
+the frozen tests and the acceptance check. The three agents differ only in model and effort; all preload
+the `implementer-contract` skill, which holds the brief an implementer receives, how it works and the
+fixed short report it returns.
+
+| Tier | Model, effort | Typical work |
+|---|---|---|
+| `implementer-light` | Haiku, low | Mechanical, fully specified edits; locating code; condensing a large payload |
+| `implementer-medium` | Sonnet, medium | A sub-task with a fixed contract and frozen tests; doc rewrites of touched code |
+| `implementer-strong` | Opus, high | Root-cause debugging, risky refactors, independent review, the retry after a lower tier blocked |
+
+The wave agent picks the cheapest tier that can do the sub-task well, never a cheaper one, using the
+mapping in the `wave` skill's `tiers.md`. Each implementer is fresh with a small context, so the many
+edit-and-test calls re-read little on a cheaper model. It never plans or widens its scope: an ambiguous
+contract, a frozen test it believes is wrong or a needed file outside its brief is a `blocked` report. The
+report has a fixed short shape with no diffs, because the wave agent reviews the diff itself. An
+implementer has no `Agent` tool, so it cannot delegate further, and it runs once: a retry is a new brief,
+one tier up.
+
+## `test-author` (subagent)
+
+[`../.claude/agents/test-author.md`](../.claude/agents/test-author.md)
+
+Runs in a wave's Specify phase. It turns the plan's acceptance cases into unit or integration tests and
+eval items, from the plan and the codebase only, never from an implementation. Each check must fail now,
+for the reason its case states, and will pass once the behaviour exists. For an LLM agent it follows the
+`semeval-maintain` and `semeval-datasets` skills plus the wave-only steps: eval items are pushed to the
+dev dataset under the dataset lock, tagged `pending:<repo>/<wave key>`, and not run. Runs on Sonnet at
+medium effort; the wave agent briefs it with `model: "opus"` for concurrency, auth, migrations or a
+published SDK API.
+
+## `wave-runner` (subagent)
+
+[`../.claude/agents/wave-runner.md`](../.claude/agents/wave-runner.md)
+
+The wave agent of one batch wave, started in the background by the coordinator. It preloads the `wave`
+skill and runs it from Specify to Report on the plan entry named in its brief, in the wave's worktree,
+without asking anyone: a stop condition ends the run with a `blocked` report and one question. Briefed with
+a handover instead, it runs only the Integrate phase of a parked wave. Runs on Opus at high effort.
 
 ## `doc-sweep` (subagent)
 
 [`../.claude/agents/doc-sweep.md`](../.claude/agents/doc-sweep.md)
 
-Triggered by saying "update documentation" without further scope, or invoked directly for a scoped
-documentation rewrite. Full tool access (`Read`, `Grep`, `Glob`, `Edit`, `Bash`, `Write`) — a sweep can
-rename, split, merge, or create documentation files as the reorganization requires, not just edit content
-in place. Deliberately a **fresh** subagent, not a fork: a full documentation consistency sweep is supposed
-to re-derive doc-vs-code accuracy from scratch, cross-checking docs against the actual current
-implementation, not trust whatever the recent conversation happened to already believe. Preloads
-`doc-conventions` via its `skills:` frontmatter field so the same rules apply without needing a markdown
-file to be touched first — this is also why it's the right subagent for a documentation-restructuring task
-in general, not just the bare "update documentation" trigger phrase: a `general-purpose` agent has the same
-tool access but doesn't get `doc-conventions` preloaded, so it would need the rules pasted into its prompt
-by hand.
+The work of a sweep wave, or an ad hoc request ("update documentation" without further scope, or a scoped
+documentation rewrite). Inside a sweep wave the approved plan is the confirmation, so it applies its fixes
+directly and lists every change in its report. Asked ad hoc in a chat, it proposes the fixes as a plan first
+and applies them only after you confirm. Full tool access (`Read`, `Grep`, `Glob`, `Edit`, `Bash`,
+`Write`): a sweep can rename, split, merge or create documentation files as the reorganization requires.
+Deliberately **fresh**, with no wave or implementation context: a sweep re-derives doc-vs-code accuracy
+from scratch and cross-checks docs against the actual implementation instead of trusting what the recent
+conversation believes. Preloads `doc-conventions` via its `skills:` frontmatter field so the same rules
+apply without a markdown file being touched first. A `general-purpose` agent has the same tool access but no
+preloaded conventions.
 
 Also checks `docs/history/index.md` (if present) for entries relevant to the area being swept, to write a
-better-grounded "why" for existing patterns — but per the *Plan history* guardrail in `instructions.md`,
-that history is synthesized into a present-tense explanation, never narrated as a timeline in the doc
-itself.
+better-grounded "why" for existing patterns. Per the *Plan history* guardrail in `instructions.md`, that
+history is synthesized into a present-tense explanation, never narrated as a timeline.
 
-See `instructions.md`'s "Documentation update: choosing the mechanism" for how this fits alongside a
-small inline edit and `wave`'s own forked Documentation update phase — three distinct shapes, not
-interchangeable.
+See `instructions.md`'s "Documentation update: choosing the mechanism" for how this fits alongside a small
+inline edit and a wave's own documentation upkeep.
 
 ## `design-conventions` (skill)
 
@@ -99,12 +175,11 @@ Claude Code's own baseline instructions — expected to grow from real cases the
 [`../.claude/skills/ruff-cleanup/SKILL.md`](../.claude/skills/ruff-cleanup/SKILL.md)
 
 Triggered by "clean up remaining ruff issues" or similar, or invoked directly (`/ruff-cleanup`). A
-**skill**, not a subagent like `doc-sweep` — runs inline in the main conversation, the same reason
-`wave`'s Implement phase stays inline: `doc-sweep` needs to be fresh specifically to avoid the agent's
-own potential self-serving read of "is this doc still accurate," but `ruff check`'s output is an
-external, objective source of truth regardless of what the conversation believes, so there's no
-analogous bias risk here — and the skill benefits from the conversation's own context on why recent
-edits were made.
+**skill**, not a subagent like `doc-sweep`: it runs inline in the main conversation. `doc-sweep` needs to
+be fresh to avoid the agent's own self-serving read of "is this doc still accurate," but `ruff check`'s
+output is an external, objective source of truth regardless of what the conversation believes, so there is
+no analogous bias risk, and the skill benefits from the conversation's own context on why recent edits
+were made.
 
 Defaults to PR-diff scope (files changed vs. the base branch, not the whole repo) — matches "minimal
 changes" and the literal "clean up before a PR" framing; whole-repo only runs if explicitly requested.
@@ -115,9 +190,8 @@ to this codebase's fix guidance — and refuses to improvise a fix for a code wi
 proposed entry, waits for confirmation, appends it, then applies it. `RULES.md` is seeded with F401,
 F841, E501, and B006 on day one and is expected to grow the same way S_Factory's break-agent checklist
 grew — one confirmed real case at a time, never bulk-authored ahead of an actual encounter. Bounded
-retry (three attempts total) rather than an unbounded loop, consistent with this harness being
-interactive/human-reviewed at every step rather than an autonomous pipeline. Finishes by pointing at
-`wave/SKILL.md`'s existing test-command-detection instruction rather than restating it.
+retry (three attempts total) rather than an unbounded loop. Finishes by running the test command the
+repo's `CLAUDE.md` names, the same one a wave's Verification phase uses.
 
 ## `sdk-release` (skill)
 
@@ -163,13 +237,13 @@ just wrote.
 
 ## `semeval-*` (nine skills)
 
-[`../.claude/skills/`](../.claude/skills/README.md): `semeval-setup-evaluation`, `semeval-setup-tracing`,
-`semeval-maintain`, `semeval-datasets`, `semeval-metrics`, `semeval-experiment`, `semeval-review-loop`,
-`semeval-model-pricing`, `semeval-guide`.
+`semeval-setup-evaluation`, `semeval-setup-tracing`, `semeval-maintain`, `semeval-datasets`,
+`semeval-metrics`, `semeval-experiment`, `semeval-review-loop`, `semeval-model-pricing`, `semeval-guide`.
 
-Installed from the semantic-evaluation project's agent skills. They set up and run offline evaluation and
-Langfuse tracing for an LLM agent with the `semantic_evaluation` and `semantic_tracing` SDKs. They are
-shared here because every repo that builds an agent needs them, not only the one that first installed them.
+These are not stored in this repo. Each `~/.claude/skills/semeval-<name>` link points at
+`~/Projects/Semantic_Evaluation/agent_skills/<name>`, the source of truth published with the SDK, so they
+update with that checkout. They set up and run offline evaluation and Langfuse tracing for an LLM agent
+with the `semantic_evaluation` and `semantic_tracing` SDKs, and every repo that builds an agent needs them.
 Each skill is self-contained: its `references/` folder holds the templates it copies into a project
 (manifest, run files, CI snippet, rules).
 
@@ -177,8 +251,13 @@ What stays in the consuming repo is the **always-on rule**, not the skills. `sem
 writes a short rule into the project (`.claude/rules/evaluation.md` and/or a `CLAUDE.md` section) saying
 that a change to the agent's behaviour is not done until its evaluation impact is checked, via the
 `semeval-maintain` skill. That rule is project-specific, because it points at the project's
-`evaluation/coverage.md`. Without it the skills still work, but nothing asks for them when the agent changes.
-Re-run `semeval-setup-evaluation` for the rule in a new repo.
+`evaluation/coverage.md`. Without it the skills still work, but nothing asks for them when the agent
+changes. Re-run `semeval-setup-evaluation` for the rule in a new repo.
 
 `semeval-maintain` is the one that matters day to day. The others run when evaluation is set up, a dataset
 is released, metrics change or an experiment compares configurations.
+
+**In a wave.** The semeval skills describe the single-session case. A wave adds three steps, carried by the
+`wave` skill and `test-author` rather than by the semeval skills: new eval items are pushed to the dev
+dataset tagged `pending:<repo>/<wave key>` and not run until the behaviour exists; every pull, merge and
+push of a dev dataset happens under the dataset lock; and the tags are removed after the wave merges.

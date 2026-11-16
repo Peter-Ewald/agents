@@ -8,7 +8,7 @@ copied into any of them, what each repo still sets up for itself, and the gotcha
 | Kind | Distributed via | Why this works |
 |---|---|---|
 | Subagents | `~/.claude/agents` symlinked once to [`../.claude/agents/`](../.claude/agents/README.md) | Documented, user-level location. It applies to every repo automatically. |
-| Skills | Each skill folder in [`../.claude/skills/`](../.claude/skills/README.md) symlinked individually into `~/.claude/skills/` | Documented: a `<skill-name>` entry in the personal skills location may be a symlink to a directory elsewhere. `~/.claude/skills/` itself stays a real directory, see Gotcha 3. |
+| Skills | Each skill folder in [`../.claude/skills/`](../.claude/skills/README.md) symlinked individually into `~/.claude/skills/`. The nine `semeval-*` links point at `~/Projects/Semantic_Evaluation/agent_skills/<name>`, the source of truth published with the SDK, not at this repo | Documented: a `<skill-name>` entry in the personal skills location may be a symlink to a directory elsewhere. `~/.claude/skills/` itself stays a real directory, see Gotcha 3. |
 | Hooks | Registered once in `~/.claude/settings.json` (global) | Global settings already apply everywhere, so there is nothing to symlink. |
 | Shared conventions (`CLAUDE.md`, `instructions.md`) | `~/.claude/rules/agents-harness.md`, which holds the single line `@~/Projects/agents/CLAUDE.md` | Claude Code loads every file in `~/.claude/rules/` in every project and resolves its `@`-imports at session start, so each session behaves as if the shared file were pasted in. |
 
@@ -36,6 +36,25 @@ copies from the main checkout into each worktree it creates.
 
 `Semantic_Evaluation` and `Checkmate` carry an untracked `.worktreeinclude` with `**/.env`, excluded per
 clone in `.git/info/exclude`.
+
+## What `new-wave-worktree.sh` adds per clone
+
+Every wave runs in a worktree that [`../.claude/scripts/new-wave-worktree.sh`](../.claude/scripts/new-wave-worktree.sh)
+creates. It writes two lines into the clone's git-internal files, which are never committed and so touch no
+shared file:
+
+| File | Line | Why |
+|---|---|---|
+| `.git/info/attributes` | `docs/history/index.md merge=union` | Parallel waves each append a line to the plan history index; a union merge keeps both instead of conflicting. |
+| `.git/info/exclude` | `.claude/worktrees/` | Keeps the worktrees out of `git status` in the main checkout. |
+
+## How a repo chooses its integration
+
+A wave lands by a pull request unless the repo's instructions carry the line `Integration: push`, which
+makes it rebase on `main` and push `main` directly. This repo carries it in
+[`../.claude/rules/integration.md`](../.claude/rules/integration.md). A team repo keeps its own
+`.claude/rules/integration.md` untracked, lists it in `.git/info/exclude` and in `.worktreeinclude` so
+every worktree receives it, and commits nothing.
 
 ## Gotcha 1: a monorepo subdirectory is not a separate repo
 

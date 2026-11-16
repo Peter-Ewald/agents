@@ -30,18 +30,20 @@ Every tool call re-sends the whole conversation, so cost grows with context size
   filter before reading, rather than letting the raw payload enter context. Delegate a payload you must
   read in full (a large diff, a trace with no obvious filter) to a subagent so the raw data lives in its
   context, not this one's.
-- **Delegate execution, keep judgment.** Scoped implementation goes to the `implementer` subagent (see the
-  `wave` skill); open-ended searches go to `Explore` or a `general-purpose` agent, which run on Sonnet by
-  default (`CLAUDE_CODE_SUBAGENT_MODEL`). Forks inherit this conversation and its model, so use one only
-  when the full context is the point.
+- **Delegate execution, keep judgment.** Scoped implementation goes to the implementer tiers
+  (`implementer-light`, `-medium`, `-strong`; see the `wave` skill's `tiers.md`): the cheapest tier that can
+  do the sub-task well, never a cheaper one. Open-ended searches go to `Explore` or a `general-purpose`
+  agent, which run on Sonnet by default (`CLAUDE_CODE_SUBAGENT_MODEL`); pass `model: "haiku"` for a plain
+  lookup. Forks inherit this conversation and its model, so use one only when the full context is the
+  point.
 - **One session per piece of work.** After a wave commits, or when switching topic, suggest `/clear`:
   `backlog.md`, `docs/history/`, and the code carry everything across sessions.
 
 ## Skill freshness
 
 `doc-conventions` is `paths`-triggered — Claude Code reloads its full content automatically on every
-markdown read/edit, so it's structurally guaranteed fresh. Every other skill (`wave`, `ruff-cleanup`,
-`sdk-release`, `design-conventions`, `langfuse-upgrade`, and the nine `semeval-*` skills) has no file-glob trigger — it's matched by
+markdown read/edit, so it's structurally guaranteed fresh. Every other skill (`wave`, `coordinate`,
+`ruff-cleanup`, `sdk-release`, `design-conventions`, `langfuse-upgrade`, and the nine `semeval-*` skills) has no file-glob trigger — it's matched by
 natural language or invoked explicitly — and its content is NOT reinjected across context compaction the way
 `instructions.md`/`CLAUDE.md` are via `reinject-instructions.py`. A memory of having read one of these
 early in a long conversation is not the same as it actually being loaded now.
@@ -56,12 +58,13 @@ impression of an earlier read.
 Claude Code's native plan mode already writes the session plan to a durable, per-session file at
 `~/.claude/plans/<slug>.md` — not the scratchpad, and not discarded when the session ends. Write (and
 revise) the session plan there, the same file plan mode already manages; no separate scratchpad copy is
-needed.
+needed. Once approved, the plan is filed as the wave's `plan` entry on the coordination board (see the
+`wave` skill), and that entry is the plan the wave agent works from until it is archived.
 
 ## Plan history archiving
 
 When a wave's Documentation update phase reaches the `docs/history/` step (see `instructions.md`, Plan
-history), copy the session plan from `~/.claude/plans/<slug>.md` into `docs/history/YYYY-MM-DD-<slug>.md`
+history), copy the plan (the board's plan entry body, or `~/.claude/plans/<slug>.md` for a plan never filed) into `docs/history/YYYY-MM-DD-<slug>.md`
 in the target repo, prefixed with the date/title/outcome header, and append its line to
 `docs/history/index.md`. Do this whether the wave completed or was dropped partway through — a dropped
 plan still archives at the point the user decides not to proceed, with outcome `dropped` and the stated
@@ -69,7 +72,7 @@ reason, rather than waiting for a wave that will never reach its Documentation u
 
 ## Shell commands and git
 
-Draft the full wave commit message in chat first. Pass it via `-m "…"` directly — no HEREDOC in the `git commit` invocation, and no `Co-Authored-By` trailer — and only run `git commit` after I say OK. (Both diverge from Claude Code's own default git behavior, which uses a HEREDOC and adds a trailer — everything else about routine shell commands already follows the default permission system, nothing extra to state here.)
+Pass commit messages via `-m "…"` directly — no HEREDOC in the `git commit` invocation, and no `Co-Authored-By` trailer. (Both diverge from Claude Code's own default git behavior, which uses a HEREDOC and adds a trailer.) Inside a wave the wave agent commits, pushes and integrates on its own once the done check passes; the plan approval is the OK. Outside a wave, draft the message in chat and run `git commit` only after I say OK.
 
 ## Chat vs. file updates
 

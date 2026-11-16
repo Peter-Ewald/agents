@@ -135,6 +135,37 @@ echo '{"tool_name": "Write", "tool_input": {"file_path": "/path/to/diagram.excal
   | ../.claude/hooks/validate_excalidraw_bindings.py; echo "exit: $?"
 ```
 
+## Coordination board hooks
+
+Parallel waves (one session or subagent per branch `wave-<NN>-<slug>`, each in its own git worktree)
+coordinate through the **board**: a folder of small markdown files at `~/.claude/coordination/<repo>/`
+(override with `CLAUDE_COORDINATION_DIR`). `<repo>` is the name of the directory holding the git common
+dir, so every worktree of a repo shares one folder. An entry is front matter (`kind`, `created`,
+`expires`, ...) plus an optional body; kinds are `plan`, `hold`, `request`, `notice`, `lock`.
+[`../.claude/scripts/board.py`](../.claude/scripts/board.py) is the stdlib helper (CLI and module) that
+reads and writes entries (`board.py --help`); the hooks import it. All three hooks stay silent when the
+repo has no board folder.
+
+| Hook | Event | What it does |
+|---|---|---|
+| `coordination-inject.py` | `SessionStart` | Deletes expired notices, then injects the repo's open entries, one line each; expired holds and locks older than 2 hours are marked `STALE`, never deleted |
+| `coordination-watch.py` | `PostToolUse` | Stats the board folder (state in `/tmp/claude-coordination-watch-<session_id>.json`) and reports added, changed or removed entries; silent on the first call and when nothing changed |
+| `coordination-guard.py` | `PreToolUse` (matcher `Bash`) | Blocks (exit 2) integrating to main (`git push` to main, `az repos pr update --status completed`, `gh pr merge`) while an open `blocks: merge` hold names this wave as waiting or `lock.md` is held by another wave, and blocks `eval-dataset push` / `push-all` while the matching `lock-dataset-<D>.md` is held by another wave |
+
+`guard` fails open: an internal error is printed to stderr and the command proceeds.
+
+[`../.claude/scripts/new-wave-worktree.sh`](../.claude/scripts/new-wave-worktree.sh) `REPO_PATH BRANCH`
+creates (or resumes) the worktree `<main checkout>/.claude/worktrees/<BRANCH>` from `origin/main`, copies
+the untracked files listed in the main checkout's `.worktreeinclude` (such as `.env`), and ensures
+`docs/history/index.md merge=union` is in the repo's `info/attributes`. It prints the worktree path as its
+last line. `python3 .claude/scripts/test_coordination.py` smoke-tests the board, the three hooks and the
+script in temp dirs.
+
+```sh
+echo '{"tool_name": "Bash", "tool_input": {"command": "git push origin main"}, "cwd": "/path/to/repo"}' \
+  | ../.claude/hooks/coordination-guard.py; echo "exit: $?"
+```
+
 ## `statusline.py` (not a lifecycle hook, but lives alongside these)
 
 [`../.claude/statusline.py`](../.claude/statusline.py), registered under `statusLine` rather than `hooks`

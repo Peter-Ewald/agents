@@ -1,140 +1,202 @@
 ---
 name: wave
 argument-hint: [wave-name-or-number]
-description: Runs a wave from backlog.md through its five phases end to end — plan, implement, documentation upkeep, verification, commit proposal — per instructions.md's Implementation Waves section. Use when starting or continuing work on a specific pending wave, or when the user says things like "let's start wave 2" / "continue wave 3".
+description: Runs a wave from backlog.md through its phases (plan, specify, implement, documentation upkeep, verification, done check, integrate, report) per instructions.md's Implementation Waves section, in its own worktree. Use when planning, starting or continuing a specific pending wave, or when the user says things like "let's plan wave 2", "start wave 3", "run wave 12 interactively" or "continue wave 3".
 ---
 
-Drive the target wave (identified by `$ARGUMENTS`, or the next one in `backlog.md`'s Next Up tier if
-unspecified) through all five phases from `instructions.md`'s Implementation Waves section. The phases
-themselves run in this conversation; only the scoped sub-tasks inside Implement and Documentation upkeep
-go to the `implementer` (see "Who does what"). Do not fork yourself unless Phase 3 below establishes that
-this particular wave owns a full documentation sweep.
+Drive the target wave (named by `$ARGUMENTS`, or the next one in `backlog.md`'s Next Up tier) through the
+phases of `instructions.md`'s Implementation Waves section. Supporting files, read when the phase needs
+them:
+
+| File | Holds | Read in |
+|---|---|---|
+| [tiers.md](tiers.md) | The implementer tiers, mapping task types to tiers, the escalation rule | Plan, Implement |
+| [board.md](board.md) | The coordination board: entry formats, holds, locks, parking and the handover | Plan, Integrate |
+| [report.md](report.md) | The wave report | Report |
+
+`board.py` below means `~/Projects/agents/.claude/scripts/board.py`, and `new-wave-worktree.sh` the script
+next to it.
 
 At every phase transition, overwrite `/tmp/claude-wave-phase-${CLAUDE_SESSION_ID}` with one line:
-`<wave name> — <phase name>`. Use this exact path, not the scratchpad directory — the statusline script
-that reads it is a separate process that only knows the session ID (from its own stdin), not this
-session's scratchpad path, so the file has to live somewhere derivable from the session ID alone.
+`<wave name> — <phase name>`. Use this exact path, not the scratchpad directory: the statusline script
+reads it from a separate process that knows only the session ID.
+
+## Batch and interactive waves
+
+| | Batch (default) | Interactive (only when the user says so, e.g. "run wave 12 interactively") |
+|---|---|---|
+| Plan | In the planning chat, with the user, in plan mode | The same |
+| After approval | The plan is filed on the board as `ready`; the planning chat moves on. The coordinator starts a `wave-runner` for it | The plan is filed as `mode: interactive`, `status: running`; this session runs the wave |
+| Questions | None reach the user directly: on a stop condition, set the plan entry to `blocked` and return the report with one question | Ask the user in this session |
+
+Both follow the same phases, done check, board rules and report. Neither asks for an OK before commit,
+push or PR: the done check replaces it.
 
 ## Who does what
 
-The main agent (Opus, high effort) owns judgment: the plan, the contracts between sub-tasks, reviewing
-each result, verification, backlog and history edits, and the commit message. Scoped execution goes to
-the `implementer` subagent (Sonnet, medium effort), which starts from a small fresh context instead of
-this conversation's — that, more than the cheaper model, is where the saving comes from. The same split
-can be overridden per sub-task in the plan, or per session with `/model` and `/effort`.
+The wave agent (Opus, high effort) owns judgment: the plan, the contracts between sub-tasks, reviewing each
+result, verification, the done check, backlog and history edits, the commit messages and the integration.
+Tests come from `test-author`; scoped execution goes to the implementer tiers in [tiers.md](tiers.md).
+Each subagent is fresh and runs once: a correction or a retry is a new brief, never a resumed agent.
 
 ## 1. Plan
 
-Once ready to lock in a concrete plan for this wave — backlog curation and any design discussion having
-already happened in normal mode — call `EnterPlanMode`. Read `backlog.md` and locate the target wave in
-its Next Up tier. If `$ARGUMENTS`
-(or the discussion) instead names something sitting in Planned or Later Considerations, treat that as a
-promotion: move it into Next Up as part of this phase — rewritten to fit that tier's tone, per
-`instructions.md`'s "Backlog tiers" — before planning it like any other wave.
+Once ready to lock in a concrete plan (backlog curation and design discussion having happened in normal
+mode), call `EnterPlanMode`. Locate the wave in `backlog.md`'s Next Up tier; something named from Planned
+or Later Considerations is promoted to Next Up first, rewritten to fit that tier's tone. Read
+`docs/history/index.md` if it exists and open the detail files whose titles relate; cite them where they
+shaped the plan.
 
-Before writing the session plan, read
-`docs/history/index.md` if it exists — for any entry whose title looks related to this wave's topic, open
-that specific detail file. Use it to avoid re-proposing a direction already tried and dropped, and cite it
-in the session plan when relevant ("considered in `docs/history/2026-05-02-...md` — rejected because X").
-Write (or refine) the session plan — see `CLAUDE.md`'s "Session plan location" for where — expanding the
-wave's tasks into concrete steps: exact files to touch, exact verification commands, exit criteria.
+Write the session plan (see `CLAUDE.md`'s "Session plan location") with:
 
-Split the implementation and its documentation into a **sub-task table** in the plan:
+- **Goal, exit criteria, verification commands** (the repo's lint, format check, tests, smoke commands).
+- **Acceptance cases**: for each behaviour the wave adds or changes, one row the user can check without
+  reading code. Unit is the default; integration only where the behaviour lives in a seam between
+  components; an eval item wherever it depends on a model (prompts, tools, routing, context).
 
-| Column | Holds |
-|---|---|
-| ID | `S1`, `S2`, … |
-| Goal | What the sub-task delivers, in one line |
-| Owned files | The only files it may change; no two sub-tasks that run at the same time share a file |
-| Depends on | Sub-task IDs that must be reviewed first |
-| Acceptance check | The exact commands that prove it done |
-| Runs as | `implementer` (default), `implementer, opus` for a sub-task that needs judgment, or `inline` |
+  | ID | Behaviour | Given | When | Then | Checked by |
+  |---|---|---|---|---|---|
+  | AC1 | Batch upload rejects a duplicate id | a batch with two items sharing an id | it is uploaded | HTTP 422 naming the id; nothing stored | unit |
+  | AC2 | Parental leave goes to the policy tool | a user asks how long parental leave is | the agent answers | it calls `search_policy` with topic parental leave | eval item, metric `tool_called` |
 
-Fix the contracts between sub-tasks — names, signatures, data shapes, where a responsibility lives — in
-the plan itself, so no sub-task has to make a design decision. Mark a sub-task `inline` when it is a
-couple of edits: briefing and reviewing it would cost more than doing it. Before
-finalizing, invoke `design-conventions` via the Skill tool (per `CLAUDE.md`'s "Skill freshness" — don't
-work from memory of an earlier read) and check the approach against it. Stay in this phase for as long as
-discussion continues, revising the plan on feedback. Call `ExitPlanMode` only once ready.
+  A documentation or sweep wave has no cases; a refactor that keeps behaviour uses the existing suite; an
+  experiment (`semeval-experiment`) measures rather than asserts. The plan says which applies and why.
+- **Sub-task table**: ID, goal, owned files (no two concurrent sub-tasks share a file), depends on,
+  acceptance check, and `Runs as`: `light`, `medium`, `strong` or `inline`, chosen per [tiers.md](tiers.md).
+  Fix the contracts between sub-tasks (names, signatures, data shapes, where a responsibility lives) in the
+  plan, so no sub-task makes a design decision. `inline` is for a couple of edits that would cost more to
+  brief than to do.
+- **Board fields**: holds on other waves (`start` or `merge`, see [board.md](board.md)), exclusive
+  resources (for example service ports), new dependencies approved with the plan, and `integration`: `push`
+  when the repo's instructions carry an `Integration: push` line, `pr` otherwise.
 
-If the discussion concludes without proceeding to Implement — the plan is dropped rather than approved —
-archive it anyway, per `CLAUDE.md`'s "Plan history archiving", with outcome `dropped` and the reason given,
-before ending the discussion. A dropped plan is exactly the kind of thing a future wave should be able to
-find in `docs/history/`.
+Before finalizing, invoke `design-conventions` via the Skill tool and check the approach against it.
+Revise on feedback; call `ExitPlanMode` once ready. On approval, file the plan entry and its holds on the
+board per [board.md](board.md). A batch wave ends here for the planning chat; continue with the next
+backlog entry, or suggest `/clear`.
 
-## 2. Implement
+A plan dropped instead of approved is archived anyway, per `CLAUDE.md`'s "Plan history archiving", with
+outcome `dropped` and the reason.
 
-Work through the sub-task table in dependency order. For each `implementer` row, spawn the `implementer`
-agent (add `model: "opus"` for an `implementer, opus` row) with a self-contained brief: it has the repo's
-`CLAUDE.md` but none of this conversation. The brief carries the goal, owned files, the contract excerpt
-from the plan, the acceptance check, and the stop conditions — whatever would otherwise force it to
-guess. Do `inline` rows yourself.
+## Worktree
 
-After each report:
+Every wave runs in its own worktree on the branch `wave-<NN>-<slug>`:
+`new-wave-worktree.sh <repo path> wave-<NN>-<slug>` creates it from the current `origin/main` (or resumes
+an existing one, for an interrupted wave) and prints its path; `cd` there. Every sub-task works in that
+worktree. Run the repo's environment setup there (`uv sync` for a uv project). Set the plan entry's status
+to `running`.
 
-- Review the result with `git diff -- <owned files>`, not by re-reading the files whole. Check the
-  report's checks actually ran and passed.
-- A small correction goes back to the same implementer via `SendMessage`, so it keeps its context. A
-  `blocked` report, or a correction that is really a design change, comes back to you: revise the plan
-  row, then re-brief or do it inline.
-- Start a dependent sub-task only after its dependencies are reviewed. Sub-tasks with disjoint owned
-  files may run at the same time; never two that share a file.
+## 2. Specify
 
-The lint hook (`lint-changed-lines.py`) and dependency hook (`flag-new-dependency.py`) fire on the
-implementer's edits the same as on yours.
+Skip for a wave without acceptance cases. Otherwise brief `test-author` (add `model: "opus"` for
+concurrency, auth, migrations or a published SDK API) with the acceptance cases, the worktree path, the
+repo and wave key, and the owned test files. Then:
 
-## 3. Documentation upkeep
+1. Check each test and eval item against its case: same situation, same expected outcome, failing for the
+   stated reason. Send a mismatch back as a new brief.
+2. Commit the tests as the wave's first commit, the **tests-first commit**:
+   `git commit -m "Wave <NN>: tests first for <title>"`. Note its SHA in the plan entry (`board.py set
+   ... tests_first=<sha>`). Eval items are not committed: `test-author` pushed them to the dev dataset,
+   tagged `pending:<repo>/<wave key>`, without running them.
+3. From now on these tests and items are **frozen**. An implementer who believes one is wrong reports
+   `blocked`. You may correct one that misread a clear case and list the change in the report; a change to
+   the case itself is a stop condition.
 
-**Default: keep it to what this wave actually made wrong.** Invoke `doc-conventions` via the Skill tool
-first — path-based triggering only fires on markdown edits, so a wave that touched no `.md` file still
-needs the rules loaded. The README and docstring rewrites are sub-tasks like any other: the plan's table
-names them, the `implementer` does them, and you review the diff. `backlog.md`, the `docs/history/`
-archive, and `CHANGELOG.md` stay with you — they depend on this conversation. Then:
+## 3. Implement
 
-- Remove the completed wave's section from `backlog.md`, and correct any later wave whose shape this one
-  changed.
-- Rewrite the comments, docstrings and READMEs of the code this wave touched.
-- Fix any documentation statement this wave has just made factually wrong — the specific claims, not the
-  documents around them.
+Work through the sub-task table in dependency order. For each tier row spawn `implementer-<tier>` with a
+self-contained brief per the `implementer-contract` skill (goal, owned files, contract excerpt, frozen
+tests, acceptance check, stop conditions); it has the repo's `CLAUDE.md` but none of this conversation. Do
+`inline` rows yourself. Sub-tasks with disjoint owned files may run at the same time.
+
+After each report, review with `git diff -- <owned files>` and check the reported checks actually ran. A
+correction or a `blocked` report follows the escalation rule in [tiers.md](tiers.md); a correction that is
+really a design change revises the plan row first. For an LLM agent, run the wave's own eval items three
+times each once the code is in place, when the installed `semantic-evaluation` can select items in a run
+file; otherwise the Verification run covers them.
+
+Commit on the branch when Implement is done, so an interrupted wave resumes from its branch.
+
+## 4. Documentation upkeep
+
+Keep it to what this wave made wrong; a wave never runs a documentation sweep (see "Sweep waves"). Invoke
+`doc-conventions` via the Skill tool first. README and docstring rewrites of touched code are sub-tasks
+like any other. Yourself:
+
+- Remove the wave's section from `backlog.md` and correct any other entry whose shape this wave changed.
+- Fix the specific documentation claims this wave made false.
 - Archive the session plan to `docs/history/` per `CLAUDE.md`'s "Plan history archiving".
-- `CHANGELOG.md`, if the wave ships a released package.
+- `CHANGELOG.md`, only in the wave that releases the package; others file a `notice`.
 
-**A full sweep of `docs/` is not part of a wave by default.** Re-reading and re-deriving every document is
-expensive, and for a repo mid-way through a planned sequence it also produces churn: a document describing
-a transition gets rewritten into successively less wrong states rather than once, correctly, at the end.
+## 5. Verification
 
-`backlog.md` is where a repo declares how it wants this handled, and it is authoritative over this default.
-Read it, and follow what it says:
+Run in the wave agent, not a subagent: it needs the Implement context to judge which failures are new. Run
+the plan's verification commands (the test command comes from the repo's `CLAUDE.md`). For an LLM agent,
+run the full regression per `semeval-maintain` step 5, with three repeats when the new items could not be
+run on their own in Implement. Every new eval item must pass all three repeats. Leave out other waves'
+`pending:` items where the run file can exclude tags; where it cannot, a failure on another wave's pending
+item is listed in the report and does not fail this wave. Name pre-existing failures explicitly.
 
-- **A backlog that sequences documentation as its own wave** — do the inline upkeep above and nothing more;
-  the sweep is that wave's job when it comes up.
-- **A backlog whose wave definition names a documentation sweep as part of that wave's own scope** — that
-  wave, and only that wave, runs the sweep. Spawn a forked agent for it (the `Agent` tool with
-  `subagent_type: fork`, so it inherits full awareness of what was just implemented), and have its prompt
-  name the specific sections to rewrite or delete, the `doc-conventions` rules to apply, and the
-  "Documentation update phase" checklist in `instructions.md`.
-- **A backlog that says nothing either way** — do the inline upkeep, and say in chat that no sweep was run
-  and what a sweep would still owe, so the user can ask for one.
+## 6. Done check
 
-## 4. Verification
+The wave may integrate only when every row holds, each with its evidence:
 
-Run as a step in the main agent, not a subagent — it needs the Implement phase's context to judge which
-failures are new. Detect the repo's own test command (don't hardcode one; it varies per repo — look for
-`pytest`, `npm test`, a `Makefile` target, etc.) and run it. Separate pre-existing failures from ones this
-wave introduced, and name the pre-existing ones explicitly when reporting rather than folding them into a
-generic "some tests failed."
+| Check | Evidence |
+|---|---|
+| Every acceptance case passes | Each case with its test or item and the result |
+| Frozen tests unchanged, or each change listed with its reason | `git diff <tests-first sha> HEAD -- <frozen files>` |
+| Frozen eval items unchanged since the Specify push, or each change listed | The items' version stamps in the dev dataset |
+| Verification passed | Each command with its result |
+| For an LLM agent: new items 3 of 3, regression gate passed | Langfuse run names, result per metric |
+| Documentation upkeep done | The files rewritten |
+| `backlog.md` updated | Yes or not applicable |
+| Plan archived in `docs/history/` with its index line | The file name |
+| `CHANGELOG.md` entry, if this wave releases a package | Yes or not applicable |
 
-## 5. Commit proposal
+A failing check sends the wave back to Implement, under the escalation rule.
 
-Draft the commit message per the template in `instructions.md`'s "Commit messages" section. Present it in
-chat and wait for explicit confirmation before running the real `git commit` — see `CLAUDE.md`'s "Shell
-commands and git" for the exact mechanism.
+## 7. Integrate
 
-Mark the wave done (remove its section from `backlog.md` and archive the session plan to `docs/history/`,
-per Phase 3's own instructions) only after verification has actually passed. Where verification depends on
-hardware or an environment this session cannot reach, say so plainly rather than treating the wave as
-finished, and name the steps still outstanding.
+Commit messages follow `instructions.md`'s "Commit messages", passed with `-m`, without a trailer.
 
-Once the commit lands, end the turn by suggesting `/clear` before the next piece of work. Everything the
-next wave needs is already in `backlog.md`, `docs/history/`, and the code; carrying this conversation
-forward only makes every later call re-read it.
+1. **Park on an open merge hold.** If a hold with `blocks: merge` still names this wave, push the branch,
+   open the PR as a draft (for `integration: pr`), write the handover and set status `waiting` per
+   [board.md](board.md), and return the report with status `waiting`. Integration continues later from the
+   handover, in a fresh agent.
+2. **Take the lock:** `board.py lock <repo> --wave <wave key>`. If another wave holds it, wait and retry.
+3. **Rebase** on the current `origin/main`. Conflicts in `backlog.md` (renumbering) and
+   `docs/history/index.md` are mechanical; other conflicts follow both plans' intent, and one neither plan
+   settles is a stop condition (release the lock first).
+4. **Re-verify** on the rebased branch: the verification commands; the regression run again only if
+   `main` brought changes that can alter the agent's behaviour.
+5. **Land it**, never with a merge commit you created:
+   - `integration: pr`: push the branch (`--force-with-lease` after the rebase), create or publish the PR
+     with the report as its description, wait for required checks, and complete it with rebase and
+     fast-forward where the repository allows it, else with the strategy it allows.
+   - `integration: push`: `git push origin HEAD:main`; if `main` moved, rebase again rather than merge.
+6. **After the merge:** remove the wave's `pending:` tags from its eval items (dataset lock, pull, edit,
+   push, unlock); satisfy the holds that wait on this wave; release the lock; remove the worktree and
+   delete the branch locally and on origin; delete the plan entry.
+
+## 8. Report
+
+Return the report in [report.md](report.md) and put it into the PR description. An interactive wave shows
+it in chat and then suggests `/clear`.
+
+## Stop conditions
+
+Stop with `blocked` and one stated question when two parts of the plan contradict each other or a case
+cannot be tested as written; a frozen test looks wrong in a way the case does not settle; a dependency the
+plan does not name is needed; the change needs work in another repo (also file a `request` there); a check
+still fails after the escalation one tier up; a rebase conflict neither plan settles; or an action with
+outside effects the plan does not name (a release, deleting data, a shared setting). Never lower a
+threshold, skip hooks (`--no-verify`), force-push `main`, or touch another wave's worktree.
+
+## Sweep waves
+
+A documentation sweep is its own wave: a backlog entry whose plan names the scope (a path or the whole
+repo) and what to check. The `doc-sweep` agent replaces Specify and Implement (add `model: "opus"` for a
+whole repo or a restructuring); it applies its fixes directly, since the approved plan is the
+confirmation, and lists them in its report. Worktree, done check (without the test rows), integration,
+board and report are the same. The planning agent proposes a sweep wave when a sequence of waves in one
+area ends, or when the backlog names one.
