@@ -16,20 +16,17 @@ Claude Code follow the same working style everywhere, without copy-pasting instr
 
 ## How a repo picks this up
 
-A repo picks up the shared conventions through one import line:
+Without any file in the repo. The setup is per machine:
 
-```
-@~/Projects/agents/CLAUDE.md
-```
+| What | How |
+|---|---|
+| Shared conventions | `~/.claude/rules/agents-harness.md` holds the single line `@~/Projects/agents/CLAUDE.md`. Claude Code loads it in every project and every worktree, so each session behaves as if `CLAUDE.md` and `instructions.md` were copied in |
+| Subagents | `~/.claude/agents` is symlinked to [`.claude/agents/`](.claude/README.md) |
+| Skills | Each skill is symlinked into `~/.claude/skills/` |
+| Hooks, statusline, subagent model | Set once in `~/.claude/settings.json` |
 
-In a personal repo, that line is the root `CLAUDE.md` (or its first line, above project-specific content).
-In a repo shared with colleagues, it goes in `CLAUDE.local.md` instead — never committed, excluded via
-`.git/info/exclude` — so the team's `CLAUDE.md` stays untouched. Claude Code resolves the import at
-session start, so the session behaves as if `CLAUDE.md` and `instructions.md` were copied in.
-
-Everything else is per machine, not per repo: `~/.claude/agents` is symlinked to
-[`.claude/agents/`](.claude/README.md), each skill is symlinked into `~/.claude/skills/`, and hooks,
-statusline, and the subagent model are set once in `~/.claude/settings.json`. See
+The one per-repo file is an optional `.worktreeinclude`, which copies gitignored files such as `.env` into
+the worktrees Claude Code creates. See
 [`docs/03-cross-repo-distribution.md`](docs/03-cross-repo-distribution.md) for the details and gotchas.
 
 ## Where to go next
