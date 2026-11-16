@@ -27,7 +27,7 @@ reads it from a separate process that knows only the session ID.
 |---|---|---|
 | Plan | In the planning chat, with the user, in plan mode | The same |
 | After approval | The plan is filed on the board as `ready`; the planning chat moves on. The coordinator starts a `wave-runner` for it | The plan is filed as `mode: interactive`, `status: running`; this session runs the wave |
-| Questions | None reach the user directly: on a stop condition, set the plan entry to `blocked` and return the report with one question | Ask the user in this session |
+| Questions | None reach the user directly: on a stop condition, set the plan entry to `blocked`, append the question to its body (see [board.md](board.md)) and return the report with it | Ask the user in this session |
 
 Both follow the same phases, done check, board rules and report. Neither asks for an OK before commit,
 push or PR: the done check replaces it.

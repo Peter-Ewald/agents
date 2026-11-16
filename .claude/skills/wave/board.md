@@ -47,6 +47,17 @@ board.py file plan wave-12-batch-upload --repo Project-Green-HR-MVP --body-file 
 The body is the plan as approved: goal, acceptance cases, sub-task table, exit criteria, verification
 commands. Keep the status current with `board.py set <repo>/<name> status=<status>`.
 
+A wave that stops on a stop condition appends its question, and the coordinator later the user's answer,
+so the question survives a lost report or a restart:
+
+```sh
+board.py set <repo>/<name> status=blocked --append-body-file <file>   # ## Question, then Options
+board.py set <repo>/<name> status=running --append-body-file <file>   # ## Answer
+```
+
+`board.py list --kind plan --status blocked` lists the plans waiting for an answer; the statusline of
+every session shows them too.
+
 ## Holds
 
 A hold is a "not before" rule between two waves, filed under the waiting repo:

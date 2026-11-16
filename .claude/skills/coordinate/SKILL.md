@@ -41,11 +41,37 @@ Each wave ends with a report in the `wave` skill's `report.md` format. On a repo
 |---|---|
 | `merged` | Tell the user in two lines (wave, PR, follow-ups). Re-read the board: a hold this wave satisfied may free another wave to start or to wake |
 | `waiting` | Note it; nothing to tell the user |
-| `blocked` | Relay the question so the user can answer without opening the code: the wave, the acceptance case or plan row, what the agent tried, the options it sees. Pass the answer back with `SendMessage` to the wave's name; it continues with its context. An answer that changes the plan also goes into the plan entry's body |
-| `failed` | Tell the user what failed and where; leave the plan entry as `blocked` until the user decides |
+| `blocked` | Ask the user the wave's question, as in "Questions to the user" |
+| `failed` | Set the plan entry to `blocked` and ask the user how to go on, as in "Questions to the user": the question says what failed and where; the options are, for example, retry, drop the plan or take the wave over interactively |
 
 A blocked wave waits minutes, so resuming it is worth its context. A parked one waits days, so it is never
 resumed.
+
+## Questions to the user
+
+A question is the one thing a wave cannot get past without the user, so it goes out on its own, never inside
+a longer message:
+
+1. **Notify.** Call `PushNotification` with one line: `<repo>/<wave> blocked: <the question, shortened>`.
+2. **Ask.** The next call is `AskUserQuestion`: no text, board action or other tool call comes between a
+   `blocked` report and the question. Each blocked wave is one question, up to four in one call. The
+   question stands on its own, because the dialog may be all the user sees: the wave, the acceptance case
+   or plan row, what the agent tried. The header is the wave's short name; the wave's `Options:` are the
+   choices, its recommended one first. The user can always answer in free text.
+3. **Fallback.** When `AskUserQuestion` cannot carry the question (no options, or more than four), send a
+   message that holds only the question, headed `QUESTION: <repo>/<wave>`.
+4. **Keep it on the board.** The wave sets its entry to `blocked` and appends the question to its body. If
+   either is missing, set it yourself: `board.py set <repo>/<name> status=blocked --append-body-file
+   <file>` with a `## Question` section. The board, not the report, is where you read a question again.
+5. **Pass the answer back.** Append it below the question as `## Answer` (`--append-body-file`), set the
+   status to `running`, and resume the wave with `SendMessage` to its name; it continues with its context.
+   If the wave's agent is gone (after a restart), set the status to `interrupted` instead and start it
+   again: it reads the answer from the plan entry.
+
+While the dialog is open you start and handle nothing else; running waves go on, and their reports wait.
+A dismissed or unanswered question leaves the entry `blocked`: it stays at the top of every message (see
+"Talking to the user") and in the statusline of every session, and you ask it again when the user next
+writes.
 
 ## Waking parked waves
 
@@ -61,9 +87,14 @@ The board, not your memory, is the state. Read it and:
 - set `running` plans whose agent is gone to `interrupted` and start them again: the wave resumes from its
   branch and worktree;
 - wake `waiting` waves whose hold is satisfied;
-- show the user `STALE` entries and the `blocked` waves with their questions.
+- show the user `STALE` entries, and ask the `blocked` waves' questions again from their plan entries, as
+  in "Questions to the user".
 
 ## Talking to the user
+
+Start every message with one line per `blocked` plan entry still waiting for an answer (`board.py list
+--kind plan --status blocked`): `BLOCKED <repo>/<name>: <its question in one line>`. Leave the lines out
+when there is none.
 
 Answer "what is running" from the board: one line per plan entry with its status. Keep messages short;
 the PR description carries the details.

@@ -14,8 +14,9 @@ brief names the plan entry on the coordination board; that entry, not the brief,
 
 - Start by creating or resuming the wave's worktree with `new-wave-worktree.sh`, `cd` into it, and read
   the repo's `CLAUDE.md` there: you were started from another directory and did not load it.
-- Nobody answers questions while you run. When a stop condition in the `wave` skill applies, set the plan
-  entry's status to `blocked` and return the report with your one question. The coordinator may resume you
-  with the answer.
+- Nobody answers questions while you run. When a stop condition in the `wave` skill applies, write your
+  one question as a `## Question` section (the report's `Question:` and `Options:` lines) to a file, run
+  `board.py set <repo>/<name> status=blocked --append-body-file <file>`, and return the report. The
+  coordinator resumes you with the answer, or a fresh agent finds it under `## Answer` in the plan entry.
 - When briefed with a handover, run only the Integrate phase from it.
 - Your final message is the report in the `wave` skill's `report.md` format, and nothing else.

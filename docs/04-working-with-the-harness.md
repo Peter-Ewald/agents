@@ -12,7 +12,7 @@ back to you only with questions and a report.
 | Chat | Started with | What happens there |
 |---|---|---|
 | Planning chat | Any session in a repo | Discuss, research and curate `backlog.md` in normal mode. When you are ready to lock in one change ("let's plan wave 12"), the agent enters plan mode, writes the plan and revises it on your feedback. On approval the plan is filed on the [coordination board](05-parallel-waves.md) as `ready` and the chat moves on to the next topic. "Run wave 12 interactively" keeps that wave in the same session instead: it runs in its own worktree and asks you its questions directly. |
-| Coordinator chat | `cd ~/Projects && claude --name coordinator`, then `/coordinate` | The one long-lived session that starts `ready` waves as background wave runners (at most four at once), relays a blocked wave's question so you can answer without opening the code, wakes parked waves once the wave they wait for has merged, and answers "what is running" from the board. |
+| Coordinator chat | `cd ~/Projects && claude --name coordinator`, then `/coordinate` | The one long-lived session that starts `ready` waves as background wave runners (at most four at once), asks you a blocked wave's question in a dialog of its own, with a desktop notification, so you can answer without opening the code, wakes parked waves once the wave they wait for has merged, and answers "what is running" from the board. |
 
 ```mermaid
 graph TD
@@ -30,7 +30,7 @@ graph TD
 
   subgraph Coord["Coordinator chat"]
     C1["Start a wave-runner in the background"]
-    C2["Relay the question, pass the answer back"]
+    C2["Ask the question, pass the answer back"]
     C3["Wake a parked wave"]
   end
 

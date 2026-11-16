@@ -169,13 +169,18 @@ echo '{"tool_name": "Bash", "tool_input": {"command": "git push origin main"}, "
 ## `statusline.py` (not a lifecycle hook, but lives alongside these)
 
 [`../.claude/statusline.py`](../.claude/statusline.py), registered under `statusLine` rather than `hooks`
-in `~/.claude/settings.json`. Reads `/tmp/claude-wave-phase-<session_id>` (written by the `wave` skill —
-see [`02-skills-and-subagents.md`](02-skills-and-subagents.md)) and prints it, or prints nothing if no wave
-is in progress. Same JSON-on-stdin shape as a hook, which is why it's documented here, but it isn't
-triggered by a lifecycle event — Claude Code polls it for display.
+in `~/.claude/settings.json`. It prints up to two parts, joined by `  |  `:
+
+| Part | Source | Shown |
+|---|---|---|
+| Wave and phase, `wave-12 — Implement` | `/tmp/claude-wave-phase-<session_id>`, written by the `wave` skill (see [`02-skills-and-subagents.md`](02-skills-and-subagents.md)) | In the session that runs the wave |
+| Blocked plans, `⚠ 2 blocked: Checkmate/wave-m6, Repo/wave-12` | Plan entries with `status: blocked` on the coordination board, read through `board.py` | In every session, so a question waiting for you is visible wherever you work |
+
+It prints nothing when neither applies. Same JSON-on-stdin shape as a hook, which is why it's documented
+here, but it isn't triggered by a lifecycle event — Claude Code polls it for display.
 
 ```sh
-echo '{"session_id": "s1"}' | ../.claude/statusline.py   # prints nothing, no wave in progress
+echo '{"session_id": "s1"}' | ../.claude/statusline.py   # no wave here, no blocked plan: prints nothing
 ```
 
 ## Testing a hook change

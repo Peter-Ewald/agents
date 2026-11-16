@@ -342,6 +342,8 @@ def cmd_list(args) -> int:
         for entry in entries(repo):
             if args.kind and entry.kind != args.kind:
                 continue
+            if args.status and entry.get("status") != args.status:
+                continue
             print(format_line(entry))
     return 0
 
@@ -458,6 +460,7 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("list", help="one line per entry")
     p.add_argument("--repo")
     p.add_argument("--kind")
+    p.add_argument("--status")
     p.set_defaults(func=cmd_list)
 
     p = sub.add_parser("file", help="create an entry")

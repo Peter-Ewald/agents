@@ -23,7 +23,7 @@ explains how the pieces fit and why.
 | Chat | What happens there |
 |---|---|
 | **Planning chat** | You and the planning agent turn backlog entries into plans in plan mode. Each approved plan names its acceptance cases, exit criteria and dependencies, and is filed on the coordination board as `ready` |
-| **Coordinator chat** | The coordinator starts `ready` waves in the background, each in its own worktree, and shows which wave runs, waits or is blocked. Questions from waves arrive here, and you answer them here |
+| **Coordinator chat** | The coordinator starts `ready` waves in the background, each in its own worktree, and shows which wave runs, waits or is blocked. A wave's question arrives here as a dialog of its own, with a desktop notification, and you answer it there. Until you do, it heads every coordinator message, and the statusline of every session shows the blocked wave |
 
 **Batch waves are the default.** Once its plan is approved, a wave needs nobody until it has merged or is
 blocked. An **interactive wave** runs only when you ask for it ("run wave 12 interactively"): you then drive
@@ -35,7 +35,7 @@ graph TD
   U1["You: approve plans"]
   PL["Planning chat:<br/>plans and acceptance cases"]
   B["Coordination board:<br/>plans, holds, locks"]
-  K["Coordinator chat:<br/>starts waves, relays questions"]
+  K["Coordinator chat:<br/>starts waves, asks their questions"]
   U2["You: answer escalations"]
   subgraph Waves["`**Wave agents**`"]
     direction LR
@@ -256,8 +256,10 @@ coordinator`, then `/coordinate`), so every repo and its worktrees are inside it
 
 1. starts each `ready` batch plan whose start holds are satisfied and whose exclusive resources are free,
    as a background `wave-runner`, at most four at once;
-2. relays a `blocked` question with enough context to answer without opening the code, and passes the
-   answer back to the stopped wave with `SendMessage`: a blocked wave waits minutes, so resuming it is worth
+2. asks you a `blocked` wave's question with `AskUserQuestion`, as the first thing it does on the report
+   and after a desktop notification, with enough context to answer without opening the code; the wave has
+   already appended the question to its plan entry. It appends your answer below the question and passes
+   it back to the stopped wave with `SendMessage`: a blocked wave waits minutes, so resuming it is worth
    its context;
 3. wakes a `waiting` wave with a fresh `wave-runner` once its merge hold is satisfied;
 4. keeps plan statuses true, and after its own restart reads the board, restarts `interrupted` waves from
@@ -273,6 +275,8 @@ repo's `CLAUDE.md` as its first step.
 | Constraint | Consequence |
 |---|---|
 | Subagents have no `AskUserQuestion` and no plan mode | A batch wave cannot ask you anything; it reports `blocked` and the coordinator asks |
+| `AskUserQuestion` takes up to four questions with two to four options each, and holds the session until you answer | A wave's report states one question with its options; a question without options goes out as a message headed `QUESTION:`. While a dialog is open the coordinator handles no other report |
+| The text of a busy turn can be cut off or lost among tool calls | A question never travels inside a longer message: it is a dialog of its own, it stays in the plan entry's body, and every coordinator message and every statusline repeats the open ones |
 | A finished subagent can be continued with `SendMessage`, with its context intact | A blocked wave resumes with your answer |
 | Subagents compact on their own as their context fills; `autoCompactWindow` in an agent file makes one compact earlier; nothing compacts a subagent on request | Every agent file sets `autoCompactWindow`; a parked wave hands over a written state instead |
 | Background subagents need `CLAUDE_CODE_DISABLE_BACKGROUND_TASKS` unset | It is not set in `~/.claude/settings.json` |

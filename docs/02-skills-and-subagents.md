@@ -68,7 +68,7 @@ history* section for the convention.
 Turns a session into the coordinator: the one long-lived session, started in `~/Projects` with
 `claude --name coordinator` and then `/coordinate`, that works through the coordination board across all
 repos. It starts `ready` plans as background `wave-runner` agents (at most four at once, respecting start
-holds and exclusive resources), relays a blocked wave's question to you and passes your answer back, wakes
+holds and exclusive resources), asks you a blocked wave's question in a dialog of its own and passes your answer back, wakes
 parked waves by starting a fresh `wave-runner` on their handover once the hold is satisfied, and rebuilds
 its state from the board after a restart. It never edits code, never merges and never answers a wave's
 question itself.

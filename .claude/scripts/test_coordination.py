@@ -273,6 +273,41 @@ def test_new_wave_worktree(env):
         assert handle.read().count("merge=union") == 1
 
 
+@with_env
+def test_blocked_plans_listed_and_shown(env):
+    for name, status in (("p1", "blocked"), ("p2", "running"), ("p3", "blocked")):
+        env.board_cli("file", "plan", name, "--repo", REPO, f"status={status}")
+    env.board_cli("file", "hold", "h1", "--repo", REPO, "status=blocked")
+    listed = env.board_cli("list", "--kind", "plan", "--status", "blocked").stdout
+    assert [line.split()[0] for line in listed.splitlines()] == [
+        f"{REPO}/p1",
+        f"{REPO}/p3",
+    ]
+
+    def statusline(payload):
+        return subprocess.run(
+            [os.path.join(HERE, "..", "statusline.py")],
+            input=json.dumps(payload),
+            env=env.env,
+            check=False,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+
+    assert statusline({}) == f"⚠ 2 blocked: {REPO}/p1, {REPO}/p3"
+    phase_file = f"/tmp/claude-wave-phase-{env.session}"
+    with open(phase_file, "w") as handle:
+        handle.write("wave-12 — Implement\n")
+    try:
+        shown = statusline({"session_id": env.session})
+    finally:
+        os.unlink(phase_file)
+    assert shown == f"wave-12 — Implement  |  ⚠ 2 blocked: {REPO}/p1, {REPO}/p3"
+    env.board_cli("set", f"{REPO}/p1", "status=running")
+    env.board_cli("set", f"{REPO}/p3", "status=running")
+    assert statusline({}) == ""
+
+
 def main():
     tests = [(n, f) for n, f in sorted(globals().items()) if n.startswith("test_")]
     failed = 0

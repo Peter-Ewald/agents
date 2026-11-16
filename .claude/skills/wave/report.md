@@ -5,6 +5,8 @@ wave's final message, nothing else) and into the PR description, so it stays wit
 
 ```
 Status: merged | waiting | blocked | failed
+Question: <only when blocked: one question that stands on its own: the case or plan row, what was tried>
+Options: <only when blocked: two to four answers, the recommended one first>
 Wave: <repo> / <wave name>
 PR: <link>, merged as <sha>          (or: pushed to main as <sha>)
 
@@ -28,8 +30,9 @@ Tests added beyond the cases: <list, or none>
 Deviations from the plan: <list, or none>
 Board: <holds satisfied, notices and requests filed>
 Follow-ups for the backlog: <list, or none>
-Question: <only when blocked: one question, with the case or plan row concerned, what was tried, and the options seen>
 ```
 
-`[x]` passed, `[ ]` failed, `[-]` not applicable. A `waiting` report carries the done check as it stood
+The question comes right after the status so the coordinator can ask it without reading further; the
+coordinator puts it to the user as a dialog, with the options as the choices. `[x]` passed, `[ ]` failed,
+`[-]` not applicable. A `waiting` report carries the done check as it stood
 when the wave parked; a `blocked` or `failed` report says which phase it stopped in.
