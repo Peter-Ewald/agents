@@ -3,7 +3,8 @@ name: doc-sweep
 description: "Documentation consistency sweep over a path or a whole repo: the work of a sweep wave, or an ad hoc request to update documentation without further scope. Deliberately fresh, with no wave or implementation context, so it re-derives doc versus code accuracy from scratch rather than trusting recent conversation state."
 tools: Read, Grep, Glob, Edit, Bash, Write
 skills: doc-conventions
-model: sonnet
+model: opus
+effort: medium
 autoCompactWindow: 150000
 ---
 

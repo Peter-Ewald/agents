@@ -4,7 +4,7 @@ description: "The light tier of the implementer. Carries out one scoped sub-task
 tools: Read, Grep, Glob, Edit, Write, Bash, Skill
 skills: implementer-contract
 model: haiku
-effort: low
+effort: medium
 autoCompactWindow: 120000
 ---
 

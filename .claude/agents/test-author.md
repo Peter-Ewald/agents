@@ -2,7 +2,7 @@
 name: test-author
 description: "Turns a wave plan's acceptance cases into failing tests and eval items before any implementation exists, in a wave's Specify phase. Works from the plan and the codebase, never from an implementation. Briefed by a wave agent; reports in a fixed short format."
 tools: Read, Grep, Glob, Edit, Write, Bash, Skill
-model: sonnet
+model: opus
 effort: medium
 autoCompactWindow: 120000
 ---
