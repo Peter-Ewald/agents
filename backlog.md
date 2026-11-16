@@ -14,6 +14,7 @@ only asks for.
 | What each skill/subagent does | [`docs/02-skills-and-subagents.md`](docs/02-skills-and-subagents.md) |
 | How cross-repo distribution works, and its two gotchas | [`docs/03-cross-repo-distribution.md`](docs/03-cross-repo-distribution.md) |
 | How parallel waves, the board and the coordinator fit together | [`docs/05-parallel-waves.md`](docs/05-parallel-waves.md) |
+| How parallel waves, the board and the coordinator fit together | [`docs/05-parallel-waves.md`](docs/05-parallel-waves.md) |
 
 ## Next Up
 
