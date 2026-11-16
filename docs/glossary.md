@@ -99,8 +99,8 @@ wave holds it, pushing `main` or completing a pull request is blocked.
 
 ## Dataset lock
 
-The board lock a wave holds for one pull, merge and push of a Langfuse dev dataset, so parallel waves never
-overwrite each other's items.
+The board lock a wave holds for one pull and push of a Langfuse dev dataset, so parallel waves push one
+after the other. `push` itself keeps what others changed since the pull and refuses a real conflict.
 
 ## Done check
 

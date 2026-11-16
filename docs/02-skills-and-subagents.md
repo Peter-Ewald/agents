@@ -259,5 +259,6 @@ is released, metrics change or an experiment compares configurations.
 
 **In a wave.** The semeval skills describe the single-session case. A wave adds three steps, carried by the
 `wave` skill and `test-author` rather than by the semeval skills: new eval items are pushed to the dev
-dataset tagged `pending:<repo>/<wave key>` and not run until the behaviour exists; every pull, merge and
-push of a dev dataset happens under the dataset lock; and the tags are removed after the wave merges.
+dataset tagged `pending:<repo>/<wave key>` and not run until the behaviour exists; every pull and push
+of a dev dataset happens under the dataset lock; and the tags are removed after the wave merges. A wave's
+own runs select its items by id, and its regression run leaves out the other waves' `pending:` tags.

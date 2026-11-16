@@ -12,8 +12,7 @@ only asks for.
 | How the pieces fit together | [`docs/00-agents-overview.md`](docs/00-agents-overview.md) |
 | What each hook does | [`docs/01-hooks.md`](docs/01-hooks.md) |
 | What each skill/subagent does | [`docs/02-skills-and-subagents.md`](docs/02-skills-and-subagents.md) |
-| How cross-repo distribution works, and its two gotchas | [`docs/03-cross-repo-distribution.md`](docs/03-cross-repo-distribution.md) |
-| How parallel waves, the board and the coordinator fit together | [`docs/05-parallel-waves.md`](docs/05-parallel-waves.md) |
+| How cross-repo distribution works, and its gotchas | [`docs/03-cross-repo-distribution.md`](docs/03-cross-repo-distribution.md) |
 | How parallel waves, the board and the coordinator fit together | [`docs/05-parallel-waves.md`](docs/05-parallel-waves.md) |
 
 ## Next Up
@@ -39,13 +38,11 @@ What to watch, and fix in the harness where it fails:
   in the agent files.
 - Whether two parallel waves is the right limit in the `coordinate` skill.
 
-Constraints until outside work lands:
-
-- At most one wave per dev dataset at a time, until `Semantic_Evaluation` Waves 64 (`push` merges what
-  changed in Langfuse since the pull) and 63 (a run selects single items and excludes other waves' pending
-  items) have landed.
-- `Semantic_Evaluation` completes its PRs with merge commits until its team allows "Rebase and
-  fast-forward"; ask them, since it is the shared repository's setting.
+Starts once `Semantic_Evaluation` Waves 64 (`push` merges what changed in Langfuse since the pull) and 63
+(a run selects items by id and leaves out other waves' `pending:` tags) have landed: the harness docs and
+skills already assume both. `Semantic_Evaluation` PRs complete with rebase and fast-forward only once its
+team allows that strategy; until then a wave there completes with the allowed one and says so in its
+report.
 
 Done when both waves have merged as batch waves without manual help, or each place that needed help is a
 harness fix or a backlog entry.

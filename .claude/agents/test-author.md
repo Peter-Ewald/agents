@@ -31,9 +31,10 @@ test files and, for an LLM agent, the dev dataset's working copy.
    these additions:
    - Pull the dev dataset right before you edit, and push right after; never work from an older copy.
    - Tag each new or changed item `pending:<repo>/<wave key>`.
-   - Push under the dataset lock: `board.py lock <repo> --wave <wave key> --dataset <dataset>`, pull,
-     merge your items into the fresh copy, push, then `board.py unlock` with the same arguments. Wait and
-     retry while another wave holds the lock; it is held for seconds. `board.py` is
+   - Push under the dataset lock: `board.py lock <repo> --wave <wave key> --dataset <dataset>`, push,
+     then `board.py unlock` with the same arguments. Wait and retry while another wave holds the lock; it
+     is held for seconds. `push` keeps what others changed since your pull; when it refuses because one of
+     your items changed in Langfuse too, pull again, redo that edit, and push. `board.py` is
      `~/Projects/agents/.claude/scripts/board.py`.
    - Do not run the items: the behaviour does not exist yet, and a model call costs money and time.
 5. A case you cannot turn into a check without guessing is ambiguous: stop and report it, the same rule

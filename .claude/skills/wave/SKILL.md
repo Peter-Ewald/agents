@@ -112,8 +112,7 @@ tests, acceptance check, stop conditions); it has the repo's `CLAUDE.md` but non
 After each report, review with `git diff -- <owned files>` and check the reported checks actually ran. A
 correction or a `blocked` report follows the escalation rule in [tiers.md](tiers.md); a correction that is
 really a design change revises the plan row first. For an LLM agent, run the wave's own eval items three
-times each once the code is in place, when the installed `semantic-evaluation` can select items in a run
-file; otherwise the Verification run covers them.
+times each once the code is in place: a run file that selects them by id (`items:`), with three repeats.
 
 Commit on the branch when Implement is done, so an interrupted wave resumes from its branch.
 
@@ -132,10 +131,9 @@ like any other. Yourself:
 
 Run in the wave agent, not a subagent: it needs the Implement context to judge which failures are new. Run
 the plan's verification commands (the test command comes from the repo's `CLAUDE.md`). For an LLM agent,
-run the full regression per `semeval-maintain` step 5, with three repeats when the new items could not be
-run on their own in Implement. Every new eval item must pass all three repeats. Leave out other waves'
-`pending:` items where the run file can exclude tags; where it cannot, a failure on another wave's pending
-item is listed in the report and does not fail this wave. Name pre-existing failures explicitly.
+run the full regression per `semeval-maintain` step 5, leaving out every other wave's `pending:` tag
+(`exclude_tags:` in the run file); this wave's own items run with it. Every new eval item must pass all
+three repeats from Implement. Name pre-existing failures explicitly.
 
 ## 6. Done check
 
@@ -172,7 +170,8 @@ Commit messages follow `instructions.md`'s "Commit messages", passed with `-m`, 
 5. **Land it**, never with a merge commit you created:
    - `integration: pr`: push the branch (`--force-with-lease` after the rebase), create or publish the PR
      with the report as its description, wait for required checks, and complete it with rebase and
-     fast-forward where the repository allows it, else with the strategy it allows.
+     fast-forward. If the repository refuses that strategy, complete it with the one it allows and say so
+     in the report.
    - `integration: push`: `git push origin HEAD:main`; if `main` moved, rebase again rather than merge.
 6. **After the merge:** remove the wave's `pending:` tags from its eval items (dataset lock, pull, edit,
    push, unlock); satisfy the holds that wait on this wave; release the lock; remove the worktree and

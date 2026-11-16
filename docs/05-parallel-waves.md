@@ -135,16 +135,16 @@ wave's branch and do not wait for the merge: other waves see them at once.
 | When | What happens | Why |
 |---|---|---|
 | Specify | `test-author` writes the items per `semeval-maintain`, tags each `pending:<repo>/<wave>`, and pushes them. Nothing runs | The items exist before any code does; an item for behaviour that does not exist yet tells nothing by failing |
-| Implement | The wave's own items, three repeats each, where the run file can select items | Fast feedback; repeats because model output varies |
-| Verification | The full regression run, leaving out other waves' `pending:` items | Another wave's unfinished behaviour is not this wave's failure |
+| Implement | The wave's own items, selected by id (`items:` in the run file), three repeats each | Fast feedback; repeats because model output varies |
+| Verification | The full regression run, leaving out every other wave's `pending:` tag (`exclude_tags:`) | Another wave's unfinished behaviour is not this wave's failure |
 | Integrate | Right after the merge, one push removes the wave's `pending:` tags | From then on every regression run includes them |
 | Dropped wave | Its pending items are archived in the Langfuse UI | `push` never deletes |
 
-Every push follows the same rule: pull, merge what changed in Langfuse since the working copy was pulled,
-then push, under the board's dataset lock for those seconds. Two `Semantic_Evaluation` backlog waves
-complete this in the SDK: Wave 64 makes `push` itself merge remote changes and refuse a real conflict;
-Wave 63 lets a run select single items and exclude tags. Until both land, run at most one wave per dev
-dataset at a time.
+Several waves work on one dev dataset at the same time. `eval-dataset push` merges against the state the
+working copy was pulled from: it keeps what others changed in Langfuse since, writes only what changed
+locally, and refuses the push when the same item changed on both sides. A refused push is pulled again,
+the edit redone, and pushed; nothing is overwritten. The board's dataset lock serialises the pushes
+themselves, for the seconds one pull and push takes.
 
 ## Worktrees
 
@@ -173,7 +173,7 @@ a rebase conflict and judge a re-verification. The coordinator never merges. The
 
 | Strategy | When | How |
 |---|---|---|
-| PR per wave (`integration: pr`, the default) | Repos with a branch policy | Completed as rebase and fast-forward where the repository allows it, else with the strategy it allows |
+| PR per wave (`integration: pr`, the default) | Repos with a branch policy | Completed with rebase and fast-forward, so the PR adds no merge commit |
 | Push `main` (`integration: push`) | Repos whose instructions carry `Integration: push` | `git push origin HEAD:main` after the rebase; if `main` moved, rebase again |
 | Stacked branch | Wave B needs wave A's code before A is merged | B branches from A's branch; a hold keeps B from merging first; after A lands, `git rebase --onto origin/main <A's old tip>` |
 

@@ -78,7 +78,7 @@ board.py unlock <repo> --wave wave-12 [--dataset hr_dev]
 
 `lock` exits 1 and names the holder when another wave holds it: wait and retry. Re-locking a lock you hold
 succeeds. The integration lock covers rebase, re-verify, push or PR completion and cleanup; the dataset
-lock only one pull, merge and push. The guard blocks pushing to `main`, completing a PR and
+lock only one pull and push. The guard blocks pushing to `main`, completing a PR and
 `eval-dataset push` while another wave holds the matching lock.
 
 ## Parking and the handover

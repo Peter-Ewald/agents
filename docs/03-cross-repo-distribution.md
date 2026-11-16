@@ -101,3 +101,20 @@ drifts from the repo. Without elevation use a directory junction instead, which 
 ```bat
 mklink /J %USERPROFILE%\.claude\skills\<name> %USERPROFILE%\Projects\agents\.claude\skills\<name>
 ```
+
+## Gotcha 4: a repo open as context brings its own harness
+
+Every folder of a VS Code workspace becomes an additional working directory of the Claude Code extension,
+and Claude Code loads the skills and subagents in an additional directory's `.claude/`. A repo opened only
+to read its code therefore also brings its skills and agents into the session. A skill with the same name
+as one here only appears under the repo's prefix (`<repo>:<skill>`), but a subagent with the same name
+can replace this harness's (seen with `Project-Green-HR-MVP`'s own `doc-sweep`). No setting turns this
+off per directory.
+
+A repo used only as context with a `.claude/` of its own is therefore not a workspace folder. It is listed
+in `permissions.additionalDirectories` of the main repo's `.claude/settings.local.json` instead, which
+grants file access and loads none of its configuration:
+
+| Repo | Opened from | As |
+|---|---|---|
+| `Project-Green-HR-MVP` | `Semantic_Evaluation` | `permissions.additionalDirectories` |
