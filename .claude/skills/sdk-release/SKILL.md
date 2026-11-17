@@ -10,7 +10,9 @@ Runs the SDK release sequence for `semantic_tracing` or `semantic_evaluation`. M
 
 1. Confirm `sdk/<package>/CHANGELOG.md` already has a `## [<version>]` entry — changelog before release,
    never the other way around. If it doesn't, stop and write the changelog entry first (per the
-   CHANGELOG format in `instructions.md`'s Documentation update phase), then re-run.
+   CHANGELOG format in `instructions.md`'s Documentation update phase), then re-run. A major release
+   (`x.0.0`) also needs a `### To upgrade` section in that entry, because the upgrade skill reads it.
+   If the section is missing, stop in the same way.
 2. Run `${CLAUDE_SKILL_DIR}/scripts/release.sh <package> <version>`. It bumps
    `sdk/<package>/pyproject.toml`'s version, removes `sdk/<package>/dist/`, runs `uv sync`, `uv build`,
    the slow `tests/test_packaged_docs.py` (it builds the package again and checks that the wheel carries

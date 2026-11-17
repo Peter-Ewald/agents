@@ -264,9 +264,15 @@ Every wave includes documentation upkeep. Not optional, not a follow-up task —
 
   ### Removed
   - …
+
+  ### To upgrade
+  - …
+
+  ### Recommended
+  - …
   ```
 
-  Omit sections that have no entries. The narrative paragraph is required when the version introduces a meaningful feature or a non-obvious breaking change; it is optional for patch releases that are purely bug fixes. Write the narrative from the user's perspective ("pods can now limit…"), not from the implementation's perspective ("added a `sample_rate` parameter to…").
+  Omit sections that have no entries, except that a major release always has `### To upgrade`. Agents read these two sections when they upgrade a project, so write them for an agent working in that project's repo. `### To upgrade` lists the steps a project must take, each named by what can be found in a repo (the old field, file, command or pin, and what replaces it). `### Recommended` lists optional moves the release makes possible, which the agent raises with the user once. A nudge that belongs to one release goes there, never into an agent skill. The narrative paragraph is required when the version introduces a meaningful feature or a non-obvious breaking change; it is optional for patch releases that are purely bug fixes. Write the narrative from the user's perspective ("pods can now limit…"), not from the implementation's perspective ("added a `sample_rate` parameter to…").
 
 **A wave never runs a full sweep of `docs/`** — re-deriving every document per wave is expensive, and while a planned sequence is still in progress it rewrites transitional descriptions into successively less wrong states instead of once, correctly, at the end. A sweep covers what upkeep does not: `docs/*.md` read as wholes rather than claim by claim, and `docs/glossary.md` in each affected scope — new terms added, retired ones removed, drifted definitions corrected.
 
