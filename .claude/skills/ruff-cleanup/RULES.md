@@ -41,3 +41,35 @@ a regex) — then `# noqa: E501` with a one-line reason.
 
 **Default fix:** replace `def f(x=[])` with `def f(x=None)` and initialize inside the body:
 `x = x if x is not None else []`. Never share one mutable object across calls.
+
+## ISC004 — implicit string concatenation inside a collection
+
+**Ruff fix:** unsafe (`--fix --unsafe-fixes --select ISC004`): wraps the joined literals in parentheses.
+
+**Default fix:** take ruff's fix when the joining is intended, the usual case for a long string split
+over lines in a list. If the two literals were meant to be separate items, a comma is missing: that is a
+bug, so stop and flag it rather than fixing it either way.
+
+**Do not:** add a comma to silence the rule: it turns one string into two items.
+
+## RUF059 — unpacked variable never used
+
+**Ruff fix:** unsafe (`--fix --unsafe-fixes --select RUF059`): prefixes the name with an underscore.
+
+**Default fix:** take ruff's fix (`status, _body = ...`). Ruff only fixes a name that is not bound again
+later in the same scope, and reports a reused name only at its last binding, so each rename can uncover
+the previous one. Rename every unused binding of that name in the scope in one pass rather than one per
+re-run.
+
+## RUF007 — `zip(x, x[1:])` for successive pairs
+
+**Ruff fix:** unsafe (`--fix --unsafe-fixes --select RUF007`): rewrites to `itertools.pairwise(x)`.
+
+**Default fix:** take ruff's fix, then let the safe `I001` fix sort the added `import itertools`.
+
+## F541 — f-string without placeholders
+
+**Ruff fix:** safe: drops the `f` prefix.
+
+**Default fix:** take ruff's fix. If a placeholder was clearly meant to be there, add it instead and say
+so in the report.
