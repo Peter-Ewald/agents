@@ -454,12 +454,21 @@ def test_keep_dir_blocks_cd_into_repo():
     """A top-level cd into a repo would carry over in the main session: blocked."""
     result = _keep_dir(f"cd {PROJECT}/RepoA && git status -sb")
     assert result.returncode == 2, result.stderr
-    assert f"{PROJECT}/RepoA" in result.stderr and "git -C" in result.stderr, result.stderr
+    assert f"{PROJECT}/RepoA" in result.stderr and "git -C" in result.stderr, (
+        result.stderr
+    )
 
 
 def test_keep_dir_blocks_relative_cd_and_unresolvable_targets():
-    for command in ("cd RepoA", "ls; cd RepoA/docs", 'cd "$WT" && ls', "cd -", "popd",
-                    "if true; then cd RepoA; fi", "echo hi\ncd RepoA"):
+    for command in (
+        "cd RepoA",
+        "ls; cd RepoA/docs",
+        'cd "$WT" && ls',
+        "cd -",
+        "popd",
+        "if true; then cd RepoA; fi",
+        "echo hi\ncd RepoA",
+    ):
         result = _keep_dir(command)
         assert result.returncode == 2, f"{command!r} allowed"
 
@@ -475,6 +484,17 @@ def test_keep_dir_allows_commands_that_leave_the_directory():
     ):
         result = _keep_dir(command)
         assert result.returncode == 0, f"{command!r} blocked: {result.stderr}"
+
+
+def test_keep_dir_reads_quotes_nested_in_command_substitution():
+    """Quotes inside `$( … )` inside double quotes don't make the command unreadable."""
+    nested = 'echo "n=$(grep -o \'"entrypoint":"[^"]*"\' f | tr \'\\n\' \' \')"'
+    allowed = _keep_dir(f"( cd {PROJECT}/RepoA && for f in $(ls); do {nested}; done )")
+    assert allowed.returncode == 0, allowed.stderr
+    blocked = _keep_dir(f"{nested}; cd RepoA")
+    assert blocked.returncode == 2 and f"{PROJECT}/RepoA" in blocked.stderr, (
+        blocked.stderr
+    )
 
 
 def test_keep_dir_allows_wave_worktree_root_only():

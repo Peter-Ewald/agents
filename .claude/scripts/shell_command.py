@@ -71,15 +71,67 @@ def _is_operator(token, lexer):
     return bool(token) and all(c in lexer.punctuation_chars for c in token)
 
 
+def _substitution_end(command, i):
+    """Index of the `)` closing a `$(` whose contents start at `i`, or None if unbalanced."""
+    depth, quote = 1, None
+    while i < len(command):
+        c = command[i]
+        if c == "\\" and quote != "'":
+            i += 2
+            continue
+        if quote:
+            quote = None if c == quote else quote
+        elif c in "'\"":
+            quote = c
+        elif c in "()":
+            depth += 1 if c == "(" else -1
+            if depth == 0:
+                return i
+        i += 1
+    return None
+
+
+def _without_substitutions(command):
+    """`command` with each `$( … )` outside single quotes replaced by `$_`.
+
+    shlex cannot read quotes nested inside a substitution inside double quotes
+    (`"$(grep '"x"' f)"`). A substitution runs in a subshell, so its contents never move the
+    shell. Returns `command` unchanged when a substitution is unbalanced.
+    """
+    out, i, quote = [], 0, None
+    while i < len(command):
+        c = command[i]
+        if quote != "'" and command.startswith("$(", i):
+            end = _substitution_end(command, i + 2)
+            if end is None:
+                return command
+            out.append("$_")
+            i = end + 1
+            continue
+        if c == "\\" and quote != "'":
+            out.append(command[i : i + 2])
+            i += 2
+            continue
+        if c in "'\"" and quote in (None, c):
+            quote = None if quote else c
+        out.append(c)
+        i += 1
+    return "".join(out)
+
+
 def persistent_directory(command, cwd):
     """The directory a shell is left in after running `command` in `cwd`.
 
     Counts only a `cd` or `pushd` at the top level: one inside `( … )` or `$( … )` runs in a
     subshell and leaves the shell where it was. `cd` with no argument goes to ~. Returns None
     when a top-level change cannot be resolved without running the command: `popd`, `cd -`, or
-    a target with `$` or a backquote. Quoting is respected; a heredoc body is not recognised.
+    a target with `$` or a backquote. Quoting is respected, also inside `$( … )`; a heredoc body
+    is not recognised.
     """
-    lexer = shlex.shlex(command.replace("\n", " ; "), posix=True, punctuation_chars=True)
+    command = _without_substitutions(command)
+    lexer = shlex.shlex(
+        command.replace("\n", " ; "), posix=True, punctuation_chars=True
+    )
     lexer.whitespace_split = True
     try:
         tokens = list(lexer)
@@ -107,5 +159,7 @@ def persistent_directory(command, cwd):
         target = targets[0] if targets else "~"
         if target == "-" or "$" in target or "`" in target:
             return None
-        directory = os.path.normpath(os.path.join(directory, os.path.expanduser(target)))
+        directory = os.path.normpath(
+            os.path.join(directory, os.path.expanduser(target))
+        )
     return directory
