@@ -78,6 +78,30 @@ the plan's title, or else the branch slug. Add the repo only when the number alo
 
 ---
 
+# Repositories and their roles
+
+Every session starts in `~/Projects`, the folder that holds each repository as a subfolder, opened as one
+window. A repository's role sets what an agent does there by default.
+
+| Role | Repositories | What an agent does there |
+|---|---|---|
+| Active | `Semantic_Evaluation`, `Checkmate`, `agents` | Waves, backlog, coordination board |
+| Context | `ramgpt-next`, `Project-Green-HR-MVP`, `Chapter_Repos/Litellm-Model integration layer`, `Chapter_Repos/LLM Evaluation Architecture` | Read, `git fetch`, read other branches with `git show` or `git diff origin/<branch>` (switch the checkout only when asked). No commit, no push |
+| Later | `Training`, `Website`, `Drainage 2.0` | Nothing until this table promotes it |
+| Ignored | `Archive`, `MLDEC-CC-harness` | Never read (denied in the global settings) |
+
+A context repository's own `CLAUDE.md` describes that repository. Its workflow, commands, skills and
+agents belong to its owning team and apply only to an agreed contribution.
+
+**A role is a default; one piece of work can override it.**
+
+| Override | How | What changes |
+|---|---|---|
+| A contribution to a context repository | The wave plan carries `Role: contribution, agreed with <team>`; for small work outside a wave, the user says so in chat | The change lands through a pull request (`integration: pr`) and follows the owning team's branch, pull request and code conventions. No file of this harness (`backlog.md`, `docs/history/`, `.claude/rules/`) is committed there; the plan and its archive stay in the active repository the work serves |
+| A lasting change of role | Edit the table above | Every later session |
+
+---
+
 # Implementation Waves
 
 Non-trivial work is organised into **waves**. A wave is one coherent slice of change that lands as a single completed objective (not a single commit). Sub-waves (`0.A`, `0.B`, …) split a wave when parts can land independently.
@@ -111,7 +135,7 @@ Documentation and sweep waves have no acceptance cases; a refactor that keeps be
 ## Worktrees and integration
 
 - Every wave runs in its own git worktree on a branch `wave-<NN>-<slug>`, so several waves run at the same time without touching each other's files.
-- History on `main` stays linear: rebase and fast-forward, never a merge commit created by a wave. A repo with a branch policy integrates through a pull request; a repo whose instructions carry an `Integration: push` line pushes `main` directly.
+- History on `main` stays linear: rebase and fast-forward, never a merge commit created by a wave. A repo with a branch policy integrates through a pull request; a repo whose instructions (its `CLAUDE.md` or an untracked `.claude/rules/*.md`) carry an `Integration: push` line pushes `main` directly.
 - Integration is serial per repo: a wave holds the repo's integration lock from its rebase to its merge. Dependencies between waves are explicit **holds** ("may not start" or "may not merge before"), never a planned order.
 
 ## Plan files: lifetime and purpose

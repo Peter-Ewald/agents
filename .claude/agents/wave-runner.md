@@ -13,7 +13,8 @@ Specify phase onward (the plan was approved before you started), following its "
 brief names the plan entry on the coordination board; that entry, not the brief, is the plan.
 
 - Start by creating or resuming the wave's worktree with `new-wave-worktree.sh`, `cd` into it, and read
-  the repo's `CLAUDE.md` there: you were started from another directory and did not load it.
+  the repo's `CLAUDE.md` and `.claude/rules/*.md` there: you were started from another directory and
+  loaded neither.
 - Nobody answers questions while you run. When a stop condition in the `wave` skill applies, write your
   one question as a `## Question` section (the report's `Question:` and `Options:` lines) to a file, run
   `board.py set <repo>/<name> status=blocked --append-body-file <file>`, and return the report. The

@@ -43,9 +43,20 @@ Each subagent is fresh and runs once: a correction or a retry is a new brief, ne
 
 Once ready to lock in a concrete plan (backlog curation and design discussion having happened in normal
 mode), call `EnterPlanMode`. Locate the wave in `backlog.md`'s Next Up tier; something named from Planned
-or Later Considerations is promoted to Next Up first, rewritten to fit that tier's tone. Read
-`docs/history/index.md` if it exists and open the detail files whose titles relate; cite them where they
-shaped the plan.
+or Later Considerations is promoted to Next Up first, rewritten to fit that tier's tone.
+
+Name the repos the change needs, with their roles from `instructions.md`'s "Repositories and their
+roles". The session starts in `~/Projects`, outside every repo, so nothing repo-specific is loaded yet.
+For each affected repo read:
+
+- its `CLAUDE.md` and untracked `.claude/rules/*.md` (conventions, test commands, `Integration: push`)
+- its `backlog.md`: Next Up and the Planned entries the change touches
+- its `docs/history/index.md`, opening only the detail files whose titles relate; cite them where they
+  shaped the plan
+
+Work in two repos is one plan per repo, each filed in its own repo's board folder with its own
+`integration`, linked by a `request` and a hold (see [board.md](board.md)). A plan that changes a
+context repo carries the line `Role: contribution, agreed with <team>`.
 
 Write the session plan (see `CLAUDE.md`'s "Session plan location"). Its title says in a few words what
 the wave does ("Repeat the Copilot eval runs"); that title is how the wave is named in every message (see
@@ -82,7 +93,8 @@ Below the summary:
   brief than to do.
 - **Board fields**: holds on other waves (`start` or `merge`, see [board.md](board.md)), exclusive
   resources (for example service ports), new dependencies approved with the plan, and `integration`: `push`
-  when the repo's instructions carry an `Integration: push` line, `pr` otherwise.
+  when the repo's `CLAUDE.md` or one of its `.claude/rules/*.md` carries an `Integration: push` line, `pr`
+  otherwise.
 
 Before finalizing, invoke `design-conventions` via the Skill tool and check the approach against it.
 Discuss the plan with the user per `instructions.md`'s "Talking to the User": the summary and the open
@@ -97,8 +109,10 @@ outcome `dropped` and the reason.
 
 Every wave runs in its own worktree on the branch `wave-<NN>-<slug>`:
 `new-wave-worktree.sh <repo path> wave-<NN>-<slug>` creates it from the current `origin/main` (or resumes
-an existing one, for an interrupted wave) and prints its path; `cd` there. Every sub-task works in that
-worktree. Run the repo's environment setup there (`uv sync` for a uv project). Set the plan entry's status
+an existing one, for an interrupted wave) and prints its path; `cd` there. It carries the main checkout's
+untracked `.claude/rules/*.md` and the files `.worktreeinclude` lists. A session started outside the repo
+reads the repo's `CLAUDE.md` and `.claude/rules/*.md` in the worktree before going on. Every sub-task works
+in that worktree. Run the repo's environment setup there (`uv sync` for a uv project). Set the plan entry's status
 to `running`.
 
 ## 2. Specify

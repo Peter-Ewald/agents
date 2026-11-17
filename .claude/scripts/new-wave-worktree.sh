@@ -5,7 +5,8 @@
 #
 # The worktree lives at <main checkout>/.claude/worktrees/<BRANCH>. A new branch starts from
 # origin/main (origin/master as fallback; local main when there is no origin). Files matched by
-# the main checkout's .worktreeinclude (untracked, e.g. .env) are copied into the worktree.
+# the main checkout's .worktreeinclude (untracked, e.g. .env) are copied into the worktree, and so
+# are untracked .claude/rules/*.md files (personal rules, gitignored or not).
 # It also ensures, once per clone, the merge=union line for docs/history/index.md in
 # info/attributes and .claude/worktrees/ in info/exclude. Prints the worktree path last.
 set -euo pipefail
@@ -51,6 +52,15 @@ if [ -f "$main/.worktreeinclude" ]; then
     cp -p "$main/$rel" "$path/$rel"
   done < <(git -C "$main" ls-files -o -i --exclude-from="$main/.worktreeinclude")
 fi
+
+# Personal rules (e.g. an untracked integration.md) are copied whether or not .worktreeinclude
+# lists them. No exclude flags, so gitignored rule files are copied too. Tracked rules are skipped
+# because the worktree already has them.
+while IFS= read -r rel; do
+  [ -n "$rel" ] || continue
+  mkdir -p "$path/$(dirname "$rel")"
+  cp -p "$main/$rel" "$path/$rel"
+done < <(git -C "$main" ls-files -o -- '.claude/rules/*.md')
 
 mkdir -p "$common/info"
 ensure_line() {

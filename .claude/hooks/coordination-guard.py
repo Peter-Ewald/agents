@@ -15,26 +15,15 @@ No board folder: allow silently. Internal errors are printed to stderr and never
 import json
 import os
 import re
-import shlex
 import sys
 
 sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "scripts")
 )
 import board
+from shell_command import git_target, segments_with_directory
 
 MAIN_BRANCHES = ("main", "master")
-
-
-def segments(command):
-    return [s.strip() for s in re.split(r"&&|\|\||;|\||\n", command) if s.strip()]
-
-
-def tokens_of(segment):
-    try:
-        return shlex.split(segment)
-    except ValueError:
-        return segment.split()
 
 
 def push_targets_main(args, directory):
@@ -90,23 +79,14 @@ def rest_completes_pr(args, directory):
 
 def classify(tokens, directory):
     """Return (directory, kind, dataset) with kind in merge|dataset|None."""
-    while tokens and re.match(r"^[A-Za-z_][A-Za-z0-9_]*=", tokens[0]):
-        tokens = tokens[1:]
     if not tokens:
         return directory, None, None
-    if tokens[0] == "git":
-        rest, i = tokens[1:], 0
-        while i < len(rest) and rest[i].startswith("-"):
-            if rest[i] == "-C" and i + 1 < len(rest):
-                directory = os.path.join(directory, rest[i + 1])
-                i += 1
-            elif rest[i] == "-c":
-                i += 1
-            i += 1
-        rest = rest[i:]
-        if rest and rest[0] == "push" and push_targets_main(rest[1:], directory):
-            return directory, "merge", None
-        return directory, None, None
+    target = git_target(tokens, directory)
+    if target is not None:
+        target_dir, args = target
+        if args and args[0] == "push" and push_targets_main(args[1:], target_dir):
+            return target_dir, "merge", None
+        return target_dir, None, None
     if tokens[:3] == ["gh", "pr", "merge"]:
         return directory, "merge", None
     if tokens[:3] == ["az", "repos", "pr"] and "update" in tokens[3:4]:
@@ -181,12 +161,8 @@ def main():
         return None
     command = (event.get("tool_input") or {}).get("command", "")
     directory = event.get("cwd") or os.getcwd()
-    for segment in segments(command):
-        tokens = tokens_of(segment)
-        if len(tokens) >= 2 and tokens[0] == "cd":
-            directory = os.path.join(directory, os.path.expanduser(tokens[1]))
-            continue
-        seg_dir, kind, dataset = classify(tokens, directory)
+    for tokens, segment_dir in segments_with_directory(command, directory):
+        seg_dir, kind, dataset = classify(tokens, segment_dir)
         if kind:
             reason = check(kind, dataset, seg_dir)
             if reason:
