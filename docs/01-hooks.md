@@ -117,6 +117,14 @@ Blocks (exit 2) a `git commit` if a staged `pyproject.toml` shows a version bump
 `CHANGELOG.md` in the same package directory isn't also staged. Enforces changelog-before-release ordering
 mechanically instead of relying on remembering to write the changelog first.
 
+The check runs in the repo each `git commit` in the command targets: the directory after a
+`cd <repo> &&`, or the one given by `git -C <repo>`, and the session's start folder otherwise. This
+matters in a session started in `~/Projects`, which is not a repo. A failure to read the staged files
+prints one line to stderr and never blocks the commit. The command parsing
+(`segments_with_directory`, `git_target`) lives in
+[`../.claude/scripts/shell_command.py`](../.claude/scripts/shell_command.py), which
+`coordination-guard.py` shares.
+
 ## `validate_excalidraw_bindings.py`
 
 **Event:** `PostToolUse` (matcher: `Edit|Write`).
@@ -148,15 +156,17 @@ repo has no board folder.
 
 | Hook | Event | What it does |
 |---|---|---|
-| `coordination-inject.py` | `SessionStart` | Deletes expired notices, then injects the repo's open entries, one line each; expired holds and locks older than 2 hours are marked `STALE`, never deleted |
+| `coordination-inject.py` | `SessionStart` | Deletes expired notices, then injects the open entries, one line each; expired holds and locks older than 2 hours are marked `STALE`, never deleted. Inside a repo it injects that repo's board. Outside a repo (a session started in `~/Projects`) it injects every repo's board as one `Coordination board for <repo>:` block per repo with open entries, deleting expired notices in each. Silent when nothing is open |
 | `coordination-watch.py` | `PostToolUse` | Stats the board folder (state in `/tmp/claude-coordination-watch-<session_id>.json`) and reports added, changed or removed entries; silent on the first call and when nothing changed |
 | `coordination-guard.py` | `PreToolUse` (matcher `Bash`) | Blocks (exit 2) integrating to main (`git push` to main, `az repos pr update --status completed`, an `az rest` PATCH on `.../pullrequests/<id>` whose body completes the PR or cannot be read yet, `gh pr merge`) while an open `blocks: merge` hold names this wave as waiting or `lock.md` is held by another wave, and blocks `eval-dataset push` / `push-all` while the matching `lock-dataset-<D>.md` is held by another wave |
 
-`guard` fails open: an internal error is printed to stderr and the command proceeds.
+`guard` fails open: an internal error is printed to stderr and the command proceeds. It parses the command with
+[`../.claude/scripts/shell_command.py`](../.claude/scripts/shell_command.py), the module the changelog hook shares.
 
 [`../.claude/scripts/new-wave-worktree.sh`](../.claude/scripts/new-wave-worktree.sh) `REPO_PATH BRANCH`
 creates (or resumes) the worktree `<main checkout>/.claude/worktrees/<BRANCH>` from `origin/main`, copies
-the untracked files listed in the main checkout's `.worktreeinclude` (such as `.env`), and ensures
+the untracked files listed in the main checkout's `.worktreeinclude` (such as `.env`) and the main
+checkout's untracked `.claude/rules/*.md` (a personal `integration.md`, whether or not listed), and ensures
 `docs/history/index.md merge=union` is in the repo's `info/attributes`. It prints the worktree path as its
 last line. `python3 .claude/scripts/test_coordination.py` smoke-tests the board, the three hooks and the
 script in temp dirs.

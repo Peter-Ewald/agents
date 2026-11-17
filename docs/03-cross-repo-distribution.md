@@ -35,13 +35,15 @@ copies from the main checkout into each worktree it creates.
 | Disabled by | A `WorktreeCreate` hook, which replaces worktree creation entirely. |
 
 `Semantic_Evaluation` and `Checkmate` carry an untracked `.worktreeinclude` with `**/.env`, excluded per
-clone in `.git/info/exclude`.
+clone in `.git/info/exclude`. It is for files such as `.env`; untracked `.claude/rules/*.md` files need no
+entry, because `new-wave-worktree.sh` copies them itself (see below).
 
 ## What `new-wave-worktree.sh` adds per clone
 
 Every wave runs in a worktree that [`../.claude/scripts/new-wave-worktree.sh`](../.claude/scripts/new-wave-worktree.sh)
-creates. It writes two lines into the clone's git-internal files, which are never committed and so touch no
-shared file:
+creates. It copies the main checkout's untracked `.claude/rules/*.md` files (for example a personal
+`integration.md`) into the worktree, whether or not `.worktreeinclude` lists them. It also writes two lines
+into the clone's git-internal files, which are never committed and so touch no shared file:
 
 | File | Line | Why |
 |---|---|---|
@@ -53,8 +55,8 @@ shared file:
 A wave lands by a pull request unless the repo's instructions carry the line `Integration: push`, which
 makes it rebase on `main` and push `main` directly. This repo carries it in
 [`../.claude/rules/integration.md`](../.claude/rules/integration.md). A team repo keeps its own
-`.claude/rules/integration.md` untracked, lists it in `.git/info/exclude` and in `.worktreeinclude` so
-every worktree receives it, and commits nothing.
+`.claude/rules/integration.md` untracked and lists it in `.git/info/exclude`. `new-wave-worktree.sh` copies
+it into every worktree, and nothing is committed.
 
 ## Gotcha 1: a monorepo subdirectory is not a separate repo
 
@@ -102,19 +104,22 @@ drifts from the repo. Without elevation use a directory junction instead, which 
 mklink /J %USERPROFILE%\.claude\skills\<name> %USERPROFILE%\Projects\agents\.claude\skills\<name>
 ```
 
-## Gotcha 4: a repo open as context brings its own harness
+## Gotcha 4: a context repo can bring its own harness
 
-Every folder of a VS Code workspace becomes an additional working directory of the Claude Code extension,
-and Claude Code loads the skills and subagents in an additional directory's `.claude/`. A repo opened only
-to read its code therefore also brings its skills and agents into the session. A skill with the same name
-as one here only appears under the repo's prefix (`<repo>:<skill>`), but a subagent with the same name
-can replace this harness's (seen with `Project-Green-HR-MVP`'s own `doc-sweep`). No setting turns this
-off per directory.
+Every chat starts in `~/Projects`, opened in VS Code as one window over all repos (a workspace file with
+the single folder `~/Projects`). That folder is not a git repo. A context repo is reached because it sits
+under the start folder, and its `CLAUDE.md` loads when the agent reads a file in it. No repo is added as a
+workspace folder or through `permissions.additionalDirectories`.
 
-A repo used only as context with a `.claude/` of its own is therefore not a workspace folder. It is listed
-in `permissions.additionalDirectories` of the main repo's `.claude/settings.local.json` instead, which
-grants file access and loads none of its configuration:
+A context repo may carry a team harness of its own. `Project-Green-HR-MVP` has a `.claude/` with agents and
+skills, and a `CLAUDE.md` that tells an agent to use them. The role rule in `instructions.md` ("Repositories
+and their roles") governs it: that workflow applies only to a contribution agreed with the team.
 
-| Repo | Opened from | As |
-|---|---|---|
-| `Project-Green-HR-MVP` | `Semantic_Evaluation` | `permissions.additionalDirectories` |
+If such a repo's `.claude/` agents or skills ever show up in a session started in `~/Projects`, hide them in
+that clone:
+
+```sh
+git sparse-checkout set --no-cone '/*' '!/.claude/'
+```
+
+Git then treats `.claude` as not checked out rather than deleted, so nothing reaches a commit.

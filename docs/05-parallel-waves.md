@@ -22,8 +22,8 @@ explains how the pieces fit and why.
 
 | Chat | What happens there |
 |---|---|
-| **Planning chat** | You and the planning agent turn backlog entries into plans in plan mode. Each approved plan names its acceptance cases, exit criteria and dependencies, and is filed on the coordination board as `ready` |
-| **Coordinator chat** | The coordinator starts `ready` waves in the background, each in its own worktree, and shows which wave runs, waits or is blocked. A wave's question arrives here as a dialog of its own, with a desktop notification, and you answer it there. Until you do, it heads every coordinator message, and the statusline of every session shows the blocked wave |
+| **Planning chat** | Started in `~/Projects`. You and the planning agent turn backlog entries into plans in plan mode. Each approved plan names its acceptance cases, exit criteria and dependencies, and is filed on the coordination board as `ready` |
+| **Coordinator chat** | Also started in `~/Projects`. The coordinator starts `ready` waves in the background, each in its own worktree, and shows which wave runs, waits or is blocked. A wave's question arrives here as a dialog of its own, with a desktop notification, and you answer it there. Until you do, it heads every coordinator message, and the statusline of every session shows the blocked wave |
 
 **Batch waves are the default.** Once its plan is approved, a wave needs nobody until it has merged or is
 blocked. An **interactive wave** runs only when you ask for it ("run wave 12 interactively"): you then drive
@@ -157,6 +157,7 @@ owned-files rule keeps parallel sub-tasks apart.
 | Location | `<repo>/.claude/worktrees/<branch>`; the script adds `.claude/worktrees/` to `.git/info/exclude` |
 | Harness instructions | The user rule `~/.claude/rules/agents-harness.md` loads them in every worktree |
 | `.env` and other gitignored files | Copied from the main checkout as the repo's `.worktreeinclude` lists |
+| Untracked `.claude/rules/*.md` | Copied from the main checkout whether or not `.worktreeinclude` lists them, so a personal `integration.md` reaches every worktree |
 | Python environment | `uv sync` in the worktree; fast through the shared uv cache |
 | Service ports (`Semantic_Evaluation`: 8001, 8002) | A wave that runs services declares them as `exclusive` in its plan entry; the coordinator never runs two such waves at once |
 
