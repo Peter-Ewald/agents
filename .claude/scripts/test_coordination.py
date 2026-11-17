@@ -308,6 +308,130 @@ def test_blocked_plans_listed_and_shown(env):
     assert statusline({}) == ""
 
 
+OTHER_REPO = "Repo_Y"
+
+
+@with_env
+def test_inject_outside_repo_shows_all_boards(env):
+    """AC1: outside a repo the hook shows every repo's board and clears expired notices."""
+    for repo in (REPO, OTHER_REPO):
+        env.board_cli("file", "plan", f"open-{repo}", "--repo", repo, "status=ready")
+        env.board_cli(
+            "file", "notice", f"old-{repo}", "--repo", repo, "expires=2000-01-01"
+        )
+    result = env.hook("coordination-inject.py", {"cwd": env.tmp, "session_id": "s"})
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip(), "no block is printed outside a repo"
+    context = json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
+    for repo in (REPO, OTHER_REPO):
+        assert context.count(f"Coordination board for {repo}:") == 1, context
+        assert f"open-{repo}" in context, context
+        assert not os.path.exists(os.path.join(env.board, repo, f"old-{repo}.md")), (
+            f"expired notice of {repo} not deleted"
+        )
+
+
+@with_env
+def test_inject_outside_repo_silent_when_nothing_open(env):
+    """AC2: outside a repo with no open entries anywhere the hook prints nothing."""
+    empty = env.hook("coordination-inject.py", {"cwd": env.tmp, "session_id": "s"})
+    assert empty.returncode == 0 and empty.stdout == "", empty.stdout
+    for repo in (REPO, OTHER_REPO):
+        env.board_cli(
+            "file", "notice", f"old-{repo}", "--repo", repo, "expires=2000-01-01"
+        )
+    expired = env.hook("coordination-inject.py", {"cwd": env.tmp, "session_id": "s"})
+    assert expired.returncode == 0 and expired.stdout == "", expired.stdout
+    # Precondition that makes the silence meaningful: an open entry outside a repo is shown.
+    env.board_cli("file", "plan", "open", "--repo", REPO, "status=ready")
+    shown = env.hook("coordination-inject.py", {"cwd": env.tmp, "session_id": "s"})
+    assert "open" in shown.stdout, "no block is printed outside a repo"
+
+
+def _stage_version_bump(env, changelog):
+    with open(os.path.join(env.repo, "pyproject.toml"), "w") as handle:
+        handle.write('[project]\nname = "x"\nversion = "1.0.0"\n')
+    env.git("add", "pyproject.toml")
+    if changelog:
+        with open(os.path.join(env.repo, "CHANGELOG.md"), "w") as handle:
+            handle.write("## [1.0.0]\n")
+        env.git("add", "CHANGELOG.md")
+
+
+def _changelog_hook(env, command):
+    return env.hook(
+        "require-changelog-before-commit.py",
+        {"tool_name": "Bash", "tool_input": {"command": command}, "cwd": env.tmp},
+    )
+
+
+@with_env
+def test_changelog_hook_checks_repo_after_cd(env):
+    """AC4: a commit after cd into a repo is checked in that repo, not the start folder."""
+    _stage_version_bump(env, changelog=False)
+    result = _changelog_hook(env, f"cd {env.repo} && git commit -m x")
+    assert result.returncode == 2, (
+        f"exit {result.returncode}: the hook checks the start folder, not {env.repo}"
+    )
+    assert "pyproject.toml" in result.stderr, result.stderr
+
+
+@with_env
+def test_changelog_hook_checks_repo_of_git_dash_c(env):
+    """AC5: a commit with git -C is checked in the named repo."""
+    _stage_version_bump(env, changelog=False)
+    result = _changelog_hook(env, f"git -C {env.repo} commit -m x")
+    assert result.returncode == 2, (
+        f"exit {result.returncode}: the hook checks the start folder, not {env.repo}"
+    )
+
+
+@with_env
+def test_changelog_hook_passes_complete_release_after_cd(env):
+    """AC6: a version bump with its CHANGELOG.md staged passes after cd."""
+    command = f"cd {env.repo} && git commit -m x"
+    # Precondition: the hook does look into the repo, so the pass below is due to the changelog.
+    _stage_version_bump(env, changelog=False)
+    blocked = _changelog_hook(env, command)
+    assert blocked.returncode == 2, (
+        f"exit {blocked.returncode}: the hook checks the start folder, not {env.repo}"
+    )
+    _stage_version_bump(env, changelog=True)
+    result = _changelog_hook(env, command)
+    assert result.returncode == 0, result.stderr
+
+
+@with_env
+def test_new_wave_worktree_copies_personal_rules(env):
+    """AC8: a new worktree gets the main checkout's untracked .claude/rules files."""
+    rules = os.path.join(env.repo, ".claude", "rules")
+    os.makedirs(rules)
+    rule = os.path.join(rules, "integration.md")
+    with open(rule, "w") as handle:
+        handle.write("Integration: push\n")
+    env.git("checkout", "main")
+    assert not os.path.exists(os.path.join(env.repo, ".worktreeinclude"))
+
+    def run():
+        return subprocess.run(
+            [WORKTREE_SH, env.repo, "wave-99-x"],
+            env=env.env,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+
+    first = run()
+    assert first.returncode == 0, first.stderr
+    path = first.stdout.strip().splitlines()[-1]
+    copied = os.path.join(path, ".claude", "rules", "integration.md")
+    assert os.path.isfile(copied), "the worktree has no .claude/rules/integration.md"
+    assert filecmp.cmp(rule, copied, shallow=False)
+    second = run()
+    assert second.returncode == 0, second.stderr
+    assert filecmp.cmp(rule, copied, shallow=False)
+
+
 def main():
     tests = [(n, f) for n, f in sorted(globals().items()) if n.startswith("test_")]
     failed = 0
