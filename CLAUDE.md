@@ -74,6 +74,8 @@ reason, rather than waiting for a wave that will never reach its Documentation u
 
 Pass commit messages via `-m "…"` directly — no HEREDOC in the `git commit` invocation, and no `Co-Authored-By` trailer. (Both diverge from Claude Code's own default git behavior, which uses a HEREDOC and adds a trailer.) Inside a wave the wave agent commits, pushes and integrates on its own once the done check passes; the plan approval is the OK. Outside a wave, draft the message in chat and run `git commit` only after I say OK.
 
+Keep the session's working directory where it is. Run a command in another folder with `git -C <dir>`, absolute paths, a tool's own option (`uv --directory <dir> run …`) or a subshell `( cd <dir> && … )`, never a bare `cd <dir> && …`: in the main session a top-level `cd` carries over to every later command, and path-scoped skills (`doc-conventions`) only match files under the working directory. The `keep-working-directory.py` hook blocks such a `cd`, except back to the session's start folder or into the root of a wave worktree, where the `wave` skill moves on purpose.
+
 ## Chat vs. file updates
 
 File changes are gated by plan mode's approval (see `instructions.md`, Working Mode) once a concrete plan

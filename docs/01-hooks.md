@@ -123,7 +123,31 @@ matters in a session started in `~/Projects`, which is not a repo. A failure to 
 prints one line to stderr and never blocks the commit. The command parsing
 (`segments_with_directory`, `git_target`) lives in
 [`../.claude/scripts/shell_command.py`](../.claude/scripts/shell_command.py), which
-`coordination-guard.py` shares.
+`coordination-guard.py` and `keep-working-directory.py` share.
+
+## `keep-working-directory.py`
+
+**Event:** `PreToolUse` (matcher: `Bash`).
+
+In the main session a `cd` at the top level of a Bash command carries over to every later command, and
+path-scoped skills are matched against that working directory: `doc-conventions` (`paths: ["**/*.md"]`)
+stops loading for markdown outside it. A session started in `~/Projects` that drifted into one repo
+silently loses it for every other repo, without any error to notice.
+
+The hook blocks (exit 2) a command whose top-level `cd` or `pushd` would leave the session anywhere other
+than where it is now, the session's start folder (`CLAUDE_PROJECT_DIR`) or the root of a worktree
+`<repo>/.claude/worktrees/<name>`, where the `wave` skill moves on purpose. It also blocks a top-level
+`popd`, `cd -` or `cd $VAR`, whose target it cannot check. The block message names the alternatives:
+`git -C`, absolute paths, a tool's own directory option, or a subshell `( cd <dir> && … )`. A `cd` inside
+`( … )` or `$( … )` and every subagent command (the event carries `agent_id`; a subagent's `cd` does not
+carry over) always pass. The parsing (`persistent_directory`) lives in `shell_command.py`; it respects
+quoting but not heredoc bodies, so a heredoc line starting with `cd` can block wrongly. An internal error
+prints one line to stderr and never blocks.
+
+```sh
+echo '{"tool_name": "Bash", "tool_input": {"command": "cd ~/Projects/agents && git status"}, "cwd": "'$HOME'/Projects"}' \
+  | CLAUDE_PROJECT_DIR=$HOME/Projects ../.claude/hooks/keep-working-directory.py; echo "exit: $?"
+```
 
 ## `validate_excalidraw_bindings.py`
 
@@ -169,7 +193,7 @@ the untracked files listed in the main checkout's `.worktreeinclude` (such as `.
 checkout's untracked `.claude/rules/*.md` (a personal `integration.md`, whether or not listed), and ensures
 `docs/history/index.md merge=union` is in the repo's `info/attributes`. It prints the worktree path as its
 last line. `python3 .claude/scripts/test_coordination.py` smoke-tests the board, the three hooks and the
-script in temp dirs.
+script in temp dirs, along with `require-changelog-before-commit.py` and `keep-working-directory.py`.
 
 ```sh
 echo '{"tool_name": "Bash", "tool_input": {"command": "git push origin main"}, "cwd": "/path/to/repo"}' \

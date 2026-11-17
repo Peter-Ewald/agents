@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Smoke tests for the coordination board, its three hooks, and new-wave-worktree.sh.
+"""Smoke tests for the coordination board, its three hooks, new-wave-worktree.sh, and the other hooks
+that parse a Bash command (require-changelog-before-commit.py, keep-working-directory.py).
 
 Run with `python3 test_coordination.py` (or pytest). Stdlib only; everything happens in temp dirs.
 """
@@ -430,6 +431,65 @@ def test_new_wave_worktree_copies_personal_rules(env):
     second = run()
     assert second.returncode == 0, second.stderr
     assert filecmp.cmp(rule, copied, shallow=False)
+
+
+PROJECT = "/projects"
+
+
+def _keep_dir(command, cwd=PROJECT, agent_id=None):
+    payload = {"tool_name": "Bash", "tool_input": {"command": command}, "cwd": cwd}
+    if agent_id:
+        payload["agent_id"] = agent_id
+    return subprocess.run(
+        [os.path.join(HOOKS, "keep-working-directory.py")],
+        input=json.dumps(payload),
+        env=dict(os.environ, CLAUDE_PROJECT_DIR=PROJECT),
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+
+def test_keep_dir_blocks_cd_into_repo():
+    """A top-level cd into a repo would carry over in the main session: blocked."""
+    result = _keep_dir(f"cd {PROJECT}/RepoA && git status -sb")
+    assert result.returncode == 2, result.stderr
+    assert f"{PROJECT}/RepoA" in result.stderr and "git -C" in result.stderr, result.stderr
+
+
+def test_keep_dir_blocks_relative_cd_and_unresolvable_targets():
+    for command in ("cd RepoA", "ls; cd RepoA/docs", 'cd "$WT" && ls', "cd -", "popd",
+                    "if true; then cd RepoA; fi", "echo hi\ncd RepoA"):
+        result = _keep_dir(command)
+        assert result.returncode == 2, f"{command!r} allowed"
+
+
+def test_keep_dir_allows_commands_that_leave_the_directory():
+    for command in (
+        f"git -C {PROJECT}/RepoA status -sb",
+        f"(cd {PROJECT}/RepoA && uv run pytest -q)",
+        f"x=$(cd {PROJECT}/RepoA && pwd); echo $x",
+        f"cd {PROJECT}/RepoA && ls; cd {PROJECT}",
+        'echo "cd RepoA; rm" && grep -n cd file.txt',
+        "uv --directory RepoA run pytest -q",
+    ):
+        result = _keep_dir(command)
+        assert result.returncode == 0, f"{command!r} blocked: {result.stderr}"
+
+
+def test_keep_dir_allows_wave_worktree_root_only():
+    worktree = f"{PROJECT}/RepoA/.claude/worktrees/wave-12-x"
+    assert _keep_dir(f"cd {worktree}").returncode == 0
+    assert _keep_dir(f"cd {worktree}/legal_poc && uv run pytest -q").returncode == 2
+
+
+def test_keep_dir_allows_return_to_project_dir():
+    assert _keep_dir(f"cd {PROJECT}", cwd=f"{PROJECT}/RepoA").returncode == 0
+    assert _keep_dir("cd ..", cwd=f"{PROJECT}/RepoA").returncode == 0
+
+
+def test_keep_dir_ignores_subagents():
+    assert _keep_dir(f"cd {PROJECT}/RepoA", agent_id="abc123").returncode == 0
 
 
 def main():

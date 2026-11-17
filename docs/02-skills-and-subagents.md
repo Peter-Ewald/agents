@@ -77,7 +77,10 @@ question itself.
 
 [`../.claude/skills/doc-conventions/SKILL.md`](../.claude/skills/doc-conventions/SKILL.md)
 
-`paths: ["**/*.md"]` — loads automatically whenever a markdown file is being read or edited, anywhere.
+`paths: ["**/*.md"]` — loads automatically whenever a markdown file under the session's working directory
+is being read or edited. The glob is matched relative to that directory, so a session that `cd`s into one
+repo stops loading the skill for markdown in the others; `keep-working-directory.py`
+([`01-hooks.md`](01-hooks.md)) blocks that `cd` in the main session.
 Contains the terminology, glossary-placement, README-structure, and mermaid-rendering conventions that
 used to live as always-on prose in `instructions.md`. Moving it into a path-scoped skill means it only
 enters context when a markdown edit is actually happening, instead of competing for attention the entire
