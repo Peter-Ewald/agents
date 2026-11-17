@@ -433,6 +433,180 @@ def test_new_wave_worktree_copies_personal_rules(env):
     assert filecmp.cmp(rule, copied, shallow=False)
 
 
+def _watch_once(env):
+    result = env.board_cli("watch-for-work", "--once")
+    assert result.returncode == 0, result.stderr
+    return result.stdout.splitlines()
+
+
+def _watch_baseline(env):
+    os.makedirs(os.path.join(env.board, REPO), exist_ok=True)
+    assert _watch_once(env) == []
+
+
+def _file_batch_plan(env, name, status="ready"):
+    filed = env.board_cli(
+        "file", "plan", name, "--repo", REPO,
+        "wave=wave-12", "mode=batch", f"status={status}",
+    )  # fmt: skip
+    assert filed.returncode == 0, filed.stderr
+
+
+def _file_open_hold(env, name):
+    filed = env.board_cli(
+        "file", "hold", name, "--repo", REPO,
+        f"waiting={REPO} / wave-12", "on=somebody", "blocks=start", "status=open",
+    )  # fmt: skip
+    assert filed.returncode == 0, filed.stderr
+
+
+@with_env
+def test_watch_for_work_first_run_records_silently(env):
+    # AC1
+    _file_batch_plan(env, "ready-plan")
+    lines = _watch_once(env)
+    assert lines == [], lines
+    assert os.path.isfile(os.path.join(env.board, ".watch-for-work.json"))
+
+
+@with_env
+def test_watch_for_work_reports_new_ready_batch_plan_once(env):
+    # AC2
+    _watch_baseline(env)
+    _file_batch_plan(env, "new-plan")
+    lines = _watch_once(env)
+    assert len(lines) == 1, lines
+    assert lines[0].startswith("work: plan ") and "new-plan" in lines[0], lines
+    assert _watch_once(env) == []
+
+
+@with_env
+def test_watch_for_work_ignores_other_changes(env):
+    # AC3
+    _watch_baseline(env)
+    _file_batch_plan(env, "new-plan")
+    assert len(_watch_once(env)) == 1
+    assert env.board_cli("set", f"{REPO}/new-plan", "status=running").returncode == 0
+    env.board_cli("file", "notice", "hello", "--repo", REPO, "summary=wave 11 merged")
+    env.board_cli(
+        "file", "plan", "chat-plan", "--repo", REPO,
+        "wave=wave-13", "mode=interactive", "status=ready",
+    )  # fmt: skip
+    lines = _watch_once(env)
+    assert lines == [], lines
+
+
+@with_env
+def test_watch_for_work_reports_interrupted_batch_plan(env):
+    # AC4
+    _watch_baseline(env)
+    _file_batch_plan(env, "running-plan", status="running")
+    assert _watch_once(env) == []
+    assert env.board_cli("set", f"{REPO}/running-plan", "status=interrupted").returncode == 0
+    lines = _watch_once(env)
+    assert len(lines) == 1, lines
+    assert lines[0].startswith("work: plan ") and "running-plan" in lines[0], lines
+
+
+@with_env
+def test_watch_for_work_reports_satisfied_hold(env):
+    # AC5
+    _watch_baseline(env)
+    _file_open_hold(env, "wave-12-after-11")
+    assert _watch_once(env) == []
+    assert env.board_cli("satisfy", f"{REPO}/wave-12-after-11").returncode == 0
+    lines = _watch_once(env)
+    assert len(lines) == 1, lines
+    assert lines[0].startswith("work: hold ") and "wave-12-after-11" in lines[0], lines
+    assert not lines[0].startswith("work: hold removed"), lines
+
+
+@with_env
+def test_watch_for_work_reports_removed_open_hold(env):
+    # AC6
+    _watch_baseline(env)
+    _file_open_hold(env, "wave-12-after-11")
+    assert _watch_once(env) == []
+    assert env.board_cli("rm", f"{REPO}/wave-12-after-11").returncode == 0
+    lines = _watch_once(env)
+    assert lines == [f"work: hold removed {REPO}/wave-12-after-11"], lines
+
+
+@with_env
+def test_watch_for_work_reports_unreadable_entry_once(env):
+    # AC7
+    _watch_baseline(env)
+    with open(os.path.join(env.board, REPO, "broken.md"), "w") as handle:
+        handle.write("---\nkind: plan\nstatus: ready\n")
+    lines = _watch_once(env)
+    assert len(lines) == 1, lines
+    assert lines[0].startswith("board: unreadable ") and "broken" in lines[0], lines
+    assert _watch_once(env) == []
+
+
+@with_env
+def test_watch_for_work_loop_reports_while_running(env):
+    # AC8
+    import queue
+    import threading
+    import time
+
+    _watch_baseline(env)
+    proc = subprocess.Popen(
+        [sys.executable, BOARD, "watch-for-work", "--interval", "0.2"],
+        env=env.env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    lines = queue.Queue()
+    threading.Thread(
+        target=lambda: [lines.put(line) for line in proc.stdout], daemon=True
+    ).start()
+    try:
+        _file_batch_plan(env, "loop-plan")
+        deadline = time.monotonic() + 2
+        seen = []
+        while time.monotonic() < deadline:
+            try:
+                seen.append(lines.get(timeout=max(0.01, deadline - time.monotonic())))
+            except queue.Empty:
+                break
+            if seen[-1].startswith("work: plan ") and "loop-plan" in seen[-1]:
+                break
+        else:
+            seen.append("<timeout>")
+        assert seen and seen[-1].startswith("work: plan "), (seen, proc.poll())
+        assert "loop-plan" in seen[-1], seen
+    finally:
+        proc.terminate()
+        proc.wait(timeout=5)
+
+
+@with_env
+def test_file_rejects_token_without_equals(env):
+    # AC10
+    result = env.board_cli("file", "notice", "n", "--repo", REPO, "stray")
+    assert result.returncode == 2, (result.returncode, result.stderr)
+    assert "stray" in result.stderr, result.stderr
+    assert not os.path.exists(os.path.join(env.board, REPO, "n.md"))
+
+
+@with_env
+def test_set_accepts_pairs_after_option(env):
+    # AC9 (pairs after an option, the Python 3.9 path)
+    _file_batch_plan(env, "p")
+    extra = os.path.join(env.tmp, "extra.txt")
+    with open(extra, "w") as handle:
+        handle.write("Handover.\n")
+    result = env.board_cli(
+        "set", f"{REPO}/p", "--append-body-file", extra, "status=interrupted"
+    )
+    assert result.returncode == 0, result.stderr
+    text = env.board_cli("show", f"{REPO}/p").stdout
+    assert "status: interrupted" in text and "Handover." in text, text
+
+
 PROJECT = "/projects"
 
 
