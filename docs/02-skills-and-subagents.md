@@ -67,10 +67,12 @@ history* section for the convention.
 
 Turns a session into the coordinator: the one long-lived session, started in `~/Projects` with
 `claude --name coordinator` and then `/coordinate`, that works through the coordination board across all
-repos. It starts `ready` plans as background `wave-runner` agents (at most four at once, respecting start
-holds and exclusive resources), asks you a blocked wave's question in a dialog of its own and passes your answer back, wakes
-parked waves by starting a fresh `wave-runner` on their handover once the hold is satisfied, and rebuilds
-its state from the board after a restart. It never edits code, never merges and never answers a wave's
+repos. It checks at start that background tasks are enabled, keeps `board.py watch-for-work` running as
+a Monitor so a newly `ready` plan or a satisfied hold wakes it even when idle, starts `ready` plans as
+background `wave-runner` agents (at most four at once, respecting start holds and exclusive resources)
+and records each one's agent ID on its plan entry, asks you a blocked wave's question in a dialog of its
+own and passes your answer back to that agent ID, wakes parked waves by starting a fresh `wave-runner` on
+their handover once the hold is satisfied, and rebuilds its state from the board after a restart. It never edits code, never merges and never answers a wave's
 question itself.
 
 ## `doc-conventions` (skill)

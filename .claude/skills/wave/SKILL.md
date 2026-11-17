@@ -15,7 +15,8 @@ them:
 | [report.md](report.md) | The wave report | Report |
 
 `board.py` below means `~/Projects/agents/.claude/scripts/board.py`, and `new-wave-worktree.sh` the script
-next to it.
+next to it. Run both as they are, never through `python3` or `bash`: only then does the allow rule for
+that folder cover them in auto mode.
 
 At every phase transition, overwrite `/tmp/claude-wave-phase-${CLAUDE_SESSION_ID}` with one line:
 `<wave name> — <phase name>`. Use this exact path, not the scratchpad directory: the statusline script

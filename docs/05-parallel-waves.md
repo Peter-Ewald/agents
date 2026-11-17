@@ -243,20 +243,31 @@ The board stays clean through three rules: every entry has an owner who deletes 
 `expires` date, after which a notice disappears and anything else is shown as stale, never dropped; and it
 holds only work in flight.
 
-Three hooks keep sessions in step with it without polling (see [01-hooks.md](01-hooks.md)):
+Three hooks keep sessions inside a repo in step with it (see [01-hooks.md](01-hooks.md)):
 `coordination-inject.py` shows the repo's entries at session start, `coordination-watch.py` reports a
-change after the next tool call, and `coordination-guard.py` blocks landing on `main` while a merge hold or
-another wave's lock is open. With no human approving merges, the guard is what stops a wave from merging
-before what it waits on exists. Live nudges between running sessions go through `SendMessage`; the board,
-not the message, holds the rule.
+change after the session's next tool call, and `coordination-guard.py` blocks landing on `main` while a
+merge hold or another wave's lock is open. With no human approving merges, the guard is what stops a wave
+from merging before what it waits on exists. The coordinator runs outside every repo and sits idle between
+events, so no hook reaches it: it keeps `board.py watch-for-work` running instead (see below). Live nudges
+between running sessions go through `SendMessage`; the board, not the message, holds the rule.
 
 ## The coordinator
 
 One session for all repos, started in the folder that holds them (`cd ~/Projects && claude --name
-coordinator`, then `/coordinate`), so every repo and its worktrees are inside its working directory. It:
+coordinator`, then `/coordinate`), so every repo and its worktrees are inside its working directory. It
+first checks that `CLAUDE_CODE_DISABLE_BACKGROUND_TASKS` is unset and refuses to start waves if it is set,
+because every wave would then run in the foreground and block it. It then reads the board and keeps
+`board.py watch-for-work` running as a Monitor. The watch polls the board every few seconds and prints a
+line only when a batch plan becomes `ready` or `interrupted` or a hold is satisfied or removed; each line
+wakes the coordinator, which re-reads the board. A Monitor runs at most 30 minutes, so the coordinator
+re-arms it on each expiry; the watch keeps its state in `<board root>/.watch-for-work.json`, so a change
+made in between is reported on re-arm. It:
 
 1. starts each `ready` batch plan whose start holds are satisfied and whose exclusive resources are free,
-   as a background `wave-runner`, at most four at once;
+   as a background `wave-runner`, at most four at once, and records the agent ID the Agent tool returns as
+   the plan entry's `agent` field. That ID addresses the wave: its report arrives as a message from it,
+   `SendMessage` to it resumes the wave, and after a restart a `running` plan whose ID `ListAgents` no
+   longer lists is `interrupted`;
 2. asks you a `blocked` wave's question with `AskUserQuestion`, as the first thing it does on the report
    and after a desktop notification, with enough context to answer without opening the code; the wave has
    already appended the question to its plan entry. It appends your answer below the question and passes
@@ -281,7 +292,10 @@ repo's `CLAUDE.md` as its first step.
 | The text of a busy turn can be cut off or lost among tool calls | A question never travels inside a longer message: it is a dialog of its own, it stays in the plan entry's body, and every coordinator message and every statusline repeats the open ones |
 | A finished subagent can be continued with `SendMessage`, with its context intact | A blocked wave resumes with your answer |
 | Subagents compact on their own as their context fills; `autoCompactWindow` in an agent file makes one compact earlier; nothing compacts a subagent on request | Every agent file sets `autoCompactWindow`; a parked wave hands over a written state instead |
-| Background subagents need `CLAUDE_CODE_DISABLE_BACKGROUND_TASKS` unset | It is not set in `~/.claude/settings.json` |
+| Background subagents need `CLAUDE_CODE_DISABLE_BACKGROUND_TASKS` unset, in `~/.claude/settings.json` and in the environment Claude Code starts from (a shell profile, VS Code) | The coordinator checks it at setup and starts no wave while it is set |
+| The Agent tool has no parameter for a name or for background: a subagent runs in the background by default, and the call returns its agent ID | The coordinator stores that ID as the plan entry's `agent` and addresses the wave by it |
+| An idle session wakes only on a message, a finished subagent or a Monitor event; hooks run only around its own tool calls | The coordinator keeps `board.py watch-for-work` running as a Monitor and re-arms it on every 30-minute expiry |
+| Auto mode drops allow rules that name an interpreter, such as `Bash(python3 …)` | The board scripts are run as they are (`~/Projects/agents/.claude/scripts/board.py …`), so the rule for that folder covers them |
 | A background subagent is denied any permission not already granted | Batch waves rely on auto mode and allow rules for git, the test runners, `az repos`, `gh` and `eval-dataset`. Completing an Azure Repos PR runs `az rest`, which has no allow rule because one would cover every Azure API; auto mode decides on it |
 | A message from another session never counts as your consent | Parallel sessions run in the same permission mode |
 | Subagent model order: per-call `model`, then the agent file's `model:`, then `CLAUDE_CODE_SUBAGENT_MODEL` | Tiers are agent files with their own `model:` and `effort:` |

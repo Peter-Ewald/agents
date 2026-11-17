@@ -502,7 +502,10 @@ def test_watch_for_work_reports_interrupted_batch_plan(env):
     _watch_baseline(env)
     _file_batch_plan(env, "running-plan", status="running")
     assert _watch_once(env) == []
-    assert env.board_cli("set", f"{REPO}/running-plan", "status=interrupted").returncode == 0
+    assert (
+        env.board_cli("set", f"{REPO}/running-plan", "status=interrupted").returncode
+        == 0
+    )
     lines = _watch_once(env)
     assert len(lines) == 1, lines
     assert lines[0].startswith("work: plan ") and "running-plan" in lines[0], lines
@@ -581,6 +584,16 @@ def test_watch_for_work_loop_reports_while_running(env):
     finally:
         proc.terminate()
         proc.wait(timeout=5)
+
+
+@with_env
+def test_watch_for_work_reports_unreadable_state(env):
+    _watch_baseline(env)
+    with open(os.path.join(env.board, ".watch-for-work.json"), "w") as handle:
+        handle.write("{not json")
+    lines = _watch_once(env)
+    assert len(lines) == 1 and lines[0].startswith("work: watch state reset"), lines
+    assert _watch_once(env) == []
 
 
 @with_env

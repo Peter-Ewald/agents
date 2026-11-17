@@ -16,11 +16,13 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import json
 import os
 import re
 import subprocess
 import sys
 import tempfile
+import time
 
 KINDS = ("plan", "hold", "request", "notice", "lock")
 LOCK_MAX_AGE = dt.timedelta(hours=2)
@@ -446,6 +448,83 @@ def cmd_unlock(args) -> int:
     return 0
 
 
+WATCH_STATE = ".watch-for-work.json"
+
+
+def _watch_scan(state: dict | None) -> tuple[dict, list[str]]:
+    """Scan the board against ``state``; return the new state and the event lines."""
+    first = state is None
+    state = state or {}
+    new: dict = {}
+    events: list[str] = []
+    for repo in all_repos():
+        folder = repo_dir(repo)
+        for filename in sorted(os.listdir(folder)):
+            if not filename.endswith(".md") or filename.startswith("."):
+                continue
+            name = filename[:-3]
+            key = f"{repo}/{name}"
+            try:
+                mtime_ns = os.stat(os.path.join(folder, filename)).st_mtime_ns
+            except OSError:
+                continue
+            old = state.get(key)
+            if old is not None and old.get("mtime_ns") == mtime_ns:
+                new[key] = old
+                continue
+            try:
+                entry = read_entry(repo, name)
+            except (BoardError, UnicodeDecodeError) as exc:
+                new[key] = {"mtime_ns": mtime_ns, "kind": "", "status": ""}
+                events.append(f"board: unreadable {key}: {exc}")
+                continue
+            kind = entry.fields.get("kind", "")
+            status = entry.fields.get("status", "")
+            new[key] = {"mtime_ns": mtime_ns, "kind": kind, "status": status}
+            old_status = old.get("status") if old else None
+            if (
+                kind == "plan"
+                and entry.fields.get("mode") == "batch"
+                and status in ("ready", "interrupted")
+                and old_status != status
+            ):
+                events.append(f"work: plan {format_line(entry)}")
+            elif kind == "hold" and status == "satisfied" and old_status != status:
+                events.append(f"work: hold {format_line(entry)}")
+    for key, old in state.items():
+        if (
+            key not in new
+            and old.get("kind") == "hold"
+            and old.get("status") != "satisfied"
+        ):
+            events.append(f"work: hold removed {key}")
+    return new, ([] if first else events)
+
+
+def cmd_watch_for_work(args) -> int:
+    path = os.path.join(board_root(), WATCH_STATE)
+    try:
+        with open(path) as handle:
+            state = json.load(handle)
+    except FileNotFoundError:
+        state = None
+    except (OSError, ValueError) as exc:
+        # Changes since the last scan are unknown: make the reader re-read the whole board.
+        print(f"work: watch state reset, re-read the board ({path}: {exc})", flush=True)
+        state = None
+    try:
+        while True:
+            state, events = _watch_scan(state)
+            for line in events:
+                print(line, flush=True)
+            _write_atomic(path, json.dumps(state))
+            if args.once:
+                return 0
+            time.sleep(args.interval)
+    except KeyboardInterrupt:
+        return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     sub = parser.add_subparsers(dest="command", required=True)
@@ -489,11 +568,31 @@ def build_parser() -> argparse.ArgumentParser:
         p.add_argument("--wave", required=True)
         p.add_argument("--dataset")
         p.set_defaults(func=func)
+
+    p = sub.add_parser(
+        "watch-for-work",
+        help="print board changes that can give the coordinator work (new ready batch plans, "
+        "satisfied or removed holds)",
+    )
+    p.add_argument("--interval", type=float, default=5.0, help="seconds between scans")
+    p.add_argument("--once", action="store_true", help="scan once and exit")
+    p.set_defaults(func=cmd_watch_for_work)
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
-    args = build_parser().parse_args(argv)
+    parser = build_parser()
+    args, rest = parser.parse_known_args(argv)
+    # Python 3.9 argparse leaves key=value tokens after an option unparsed.
+    if args.command in ("file", "set"):
+        args.pairs.extend(token for token in rest if "=" in token)
+        rest = [token for token in rest if "=" not in token]
+    if rest:
+        parser.error(f"unrecognized arguments: {' '.join(rest)}")
+    if args.command in ("file", "set"):
+        stray = [pair for pair in args.pairs if "=" not in pair]
+        if stray:
+            parser.error(f"unrecognized arguments: {' '.join(stray)}")
     try:
         return args.func(args)
     except (BoardError, OSError) as exc:
