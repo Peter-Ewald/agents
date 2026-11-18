@@ -107,9 +107,12 @@ mklink /J %USERPROFILE%\.claude\skills\<name> %USERPROFILE%\Projects\agents\.cla
 ## Gotcha 4: a context repo can bring its own harness
 
 Every chat starts in `~/Projects`, opened in VS Code as one window over all repos (a workspace file with
-the single folder `~/Projects`). That folder is not a git repo. A context repo is reached because it sits
-under the start folder, and its `CLAUDE.md` loads when the agent reads a file in it. No repo is added as a
-workspace folder or through `permissions.additionalDirectories`.
+the single folder `~/Projects`). That folder is not a git repo. A context repo's `CLAUDE.md` loads when the
+agent reads a file in it.
+
+Every context repo is also listed in `permissions.additionalDirectories` in the global
+`~/.claude/settings.json`. A session that starts elsewhere, in a wave worktree or in one repo's folder, can
+then still read it. A context repo added to the role table in `instructions.md` gets its entry there too.
 
 A context repo may carry a team harness of its own. `Project-Green-HR-MVP` has a `.claude/` with agents and
 skills, and a `CLAUDE.md` that tells an agent to use them. The role rule in `instructions.md` ("Repositories

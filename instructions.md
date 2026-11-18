@@ -86,7 +86,7 @@ window. A repository's role sets what an agent does there by default.
 | Role | Repositories | What an agent does there |
 |---|---|---|
 | Active | `Semantic_Evaluation`, `Checkmate`, `agents` | Waves, backlog, coordination board |
-| Context | `ramgpt-next`, `Project-Green-HR-MVP`, `Chapter_Repos` (one git repository; all its project folders) | Read, `git fetch`, read other branches with `git show` or `git diff origin/<branch>` (switch the checkout only when asked). No commit, no push |
+| Context | `ramgpt-next`, `Project-Green-HR-MVP`, `IDP` (Keel, the developer platform), `Chapter_Repos` (one git repository; all its project folders) | Read, `git fetch`, read other branches with `git show` or `git diff origin/<branch>` (switch the checkout only when asked). No commit, no push |
 | Later | `Training`, `Website`, `Drainage 2.0` | Nothing until this table promotes it |
 | Ignored | `Archive`, `MLDEC-CC-harness` | Never read (denied in the global settings) |
 
