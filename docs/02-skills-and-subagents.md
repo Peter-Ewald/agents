@@ -262,8 +262,10 @@ changes. Re-run `semeval-setup-evaluation` for the rule in a new repo.
 `semeval-maintain` is the one that matters day to day. The others run when evaluation is set up, a dataset
 is released, metrics change or an experiment compares configurations.
 
-**In a wave.** The semeval skills describe the single-session case. A wave adds three steps, carried by the
-`wave` skill and `test-author` rather than by the semeval skills: new eval items are pushed to the dev
-dataset tagged `pending:<repo>/<wave key>` and not run until the behaviour exists; every pull and push
-of a dev dataset happens under the dataset lock; and the tags are removed after the wave merges. A wave's
-own runs select its items by id, and its regression run leaves out the other waves' `pending:` tags.
+**In a wave.** The semeval skills describe the single-session case: `semeval-maintain` tags new items
+pending, a run leaves pending items out unless they are selected, and the tags come off after the merge.
+A wave adds, through the `wave` skill and `test-author`: the tag names the wave key,
+`pending:<repo>/<wave key>`, instead of the branch; every pull and push of a dev dataset happens under the
+dataset lock; the items are not run in Specify, before the behaviour exists; Implement runs them by id
+with three repeats (`eval-run --items <ids> --repeats 3`); and Verification runs the full regression
+with the wave's own tag (`--include-pending pending:<repo>/<wave key>`).

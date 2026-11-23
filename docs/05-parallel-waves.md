@@ -134,9 +134,9 @@ wave's branch and do not wait for the merge: other waves see them at once.
 
 | When | What happens | Why |
 |---|---|---|
-| Specify | `test-author` writes the items per `semeval-maintain`, tags each `pending:<repo>/<wave>`, and pushes them. Nothing runs | The items exist before any code does; an item for behaviour that does not exist yet tells nothing by failing |
-| Implement | The wave's own items, selected by id (`items:` in the run file), three repeats each | Fast feedback; repeats because model output varies |
-| Verification | The full regression run, leaving out every other wave's `pending:` tag (`exclude_tags:`) | Another wave's unfinished behaviour is not this wave's failure |
+| Specify | `test-author` writes the items per `semeval-maintain`, tags each `pending:<repo>/<wave key>`, and pushes them. Nothing runs | The items exist before any code does; an item for behaviour that does not exist yet tells nothing by failing |
+| Implement | The wave's own items, named by id, three repeats each: `eval-run --items <ids> --repeats 3` | Fast feedback; repeats because model output varies. An item named by id runs although it is pending |
+| Verification | The full regression run with the wave's own tag: `eval-run --include-pending pending:<repo>/<wave key>`. Other waves' pending items are left out by default | Another wave's unfinished behaviour is not this wave's failure, and this wave's own must run |
 | Integrate | Right after the merge, one push removes the wave's `pending:` tags | From then on every regression run includes them |
 | Dropped wave | Its pending items are archived in the Langfuse UI | `push` never deletes |
 

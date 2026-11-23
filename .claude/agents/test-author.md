@@ -30,7 +30,8 @@ test files and, for an LLM agent, the dev dataset's working copy.
    with the Skill tool and follow its steps 1 to 4, and `semeval-datasets` for the pull and push, with
    these additions:
    - Pull the dev dataset right before you edit, and push right after; never work from an older copy.
-   - Tag each new or changed item `pending:<repo>/<wave key>`.
+   - Tag each new or changed item `pending:<repo>/<wave key>`, in place of the `pending:<repo>/<branch>`
+     that `semeval-maintain` names: the wave runs and later untags its items by that key.
    - Push under the dataset lock: `board.py lock <repo> --wave <wave key> --dataset <dataset>`, push,
      then `board.py unlock` with the same arguments. Wait and retry while another wave holds the lock; it
      is held for seconds. `push` keeps what others changed since your pull; when it refuses because one of

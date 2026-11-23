@@ -141,8 +141,12 @@ tests, acceptance check, stop conditions); it has the repo's `CLAUDE.md` but non
 
 After each report, review with `git diff -- <owned files>` and check the reported checks actually ran. A
 correction or a `blocked` report follows the escalation rule in [tiers.md](tiers.md); a correction that is
-really a design change revises the plan row first. For an LLM agent, run the wave's own eval items three
-times each once the code is in place: a run file that selects them by id (`items:`), with three repeats.
+really a design change revises the plan row first. For an LLM agent, run the wave's own eval items once
+the code is in place, three times each:
+`eval-run --run-file <the project's regression run file> --items <ids> --repeats 3`. An item named by id
+runs although it is still pending. The flags need `semantic-evaluation` 4.3.0 or later; a repo pinned
+lower upgrades in a sub-task of its own plan (`semeval-upgrade`), and a plan without one stops the wave,
+since the upgrade is a dependency it does not name.
 
 Commit on the branch when Implement is done, so an interrupted wave resumes from its branch.
 
@@ -163,9 +167,10 @@ like any other. Yourself:
 
 Run in the wave agent, not a subagent: it needs the Implement context to judge which failures are new. Run
 the plan's verification commands (the test command comes from the repo's `CLAUDE.md`). For an LLM agent,
-run the full regression per `semeval-maintain` step 5, leaving out every other wave's `pending:` tag
-(`exclude_tags:` in the run file); this wave's own items run with it. Every new eval item must pass all
-three repeats from Implement. Name pre-existing failures explicitly.
+run the full regression per `semeval-maintain` step 5 with this wave's own items included:
+`eval-run --run-file <the project's regression run file> --include-pending pending:<repo>/<wave key>`.
+Other waves' pending items are left out by default. The selection stays on the command line, never in a
+committed run file. Every new eval item must pass all three repeats from Implement. Name pre-existing failures explicitly.
 
 ## 6. Done check
 
