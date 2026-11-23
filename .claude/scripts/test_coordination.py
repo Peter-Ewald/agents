@@ -6,11 +6,13 @@ Run with `python3 test_coordination.py` (or pytest). Stdlib only; everything hap
 """
 
 import filecmp
+import importlib.util
 import json
 import os
 import subprocess
 import sys
 import tempfile
+import time
 import uuid
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -32,7 +34,14 @@ class Env:
         self.board = os.path.join(self.tmp, "board")
         self.remote = os.path.join(self.tmp, "remote.git")
         self.repo = os.path.join(self.tmp, REPO)
-        self.env = dict(os.environ, CLAUDE_COORDINATION_DIR=self.board, **GIT_ENV)
+        # CLAUDE_PROJECTS_DIR points at the temp dir, so the statusline and the SessionStart sync
+        # hook see only the active repos a test names, never the real ~/Projects.
+        self.env = dict(
+            os.environ,
+            CLAUDE_COORDINATION_DIR=self.board,
+            CLAUDE_PROJECTS_DIR=self.tmp,
+            **GIT_ENV,
+        )
         self.session = "test-" + uuid.uuid4().hex
         self.git("init", "--bare", "-b", "main", self.remote, cwd=self.tmp)
         self.git("init", "-b", "main", self.repo, cwd=self.tmp)
@@ -872,6 +881,307 @@ def test_inject_no_pointer_line_without_inbox(env):
     context = _inject_context(env, env.tmp)
     assert f"{REPO}/p1" in context, context
     assert "inbox" not in context, context
+
+
+# --------------------------------------------------------------------------- sync main
+
+SYNC_MAIN = os.path.join(HERE, "sync_main.py")
+SYNC_HOOK = os.path.join(HOOKS, "sync-main-at-start.py")
+SYNC_HEADER = "Main checkouts synced at session start:"
+
+
+def _sync_module():
+    """sync_main.py imported as a module (the hook and the statusline import it the same way)."""
+    assert os.path.exists(SYNC_MAIN), f"{SYNC_MAIN} does not exist"
+    spec = importlib.util.spec_from_file_location("sync_main", SYNC_MAIN)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _sync_cli(env, *args):
+    assert os.path.exists(SYNC_MAIN), f"{SYNC_MAIN} does not exist"
+    return subprocess.run(
+        [SYNC_MAIN, *args],
+        env=env.env,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+
+def _write(path, text):
+    with open(path, "w") as handle:
+        handle.write(text)
+
+
+def _read(path):
+    with open(path) as handle:
+        return handle.read()
+
+
+def _teammate_push(env, files=None, commits=1):
+    """A teammate's clone of origin commits COMMITS times and pushes to origin/main.
+
+    FILES maps a file name to its new content (applied in the first commit); by default a new
+    file per commit, so the push never touches the main checkout's files."""
+    mate = os.path.join(env.tmp, "teammate")
+    if not os.path.isdir(mate):
+        env.git("clone", env.remote, mate, cwd=env.tmp)
+    env.git("pull", "--ff-only", "origin", "main", cwd=mate)
+    for number in range(commits):
+        changes = files if (files and number == 0) else {f"mate-{uuid.uuid4().hex}.txt": "x\n"}
+        for name, content in changes.items():
+            _write(os.path.join(mate, name), content)
+            env.git("add", name, cwd=mate)
+        env.git("commit", "-m", f"teammate {number}", cwd=mate)
+    env.git("push", "origin", "main", cwd=mate)
+    return env.git("rev-parse", "HEAD", cwd=mate)
+
+
+def _on_main(env):
+    env.git("checkout", "main")
+    return env.git("rev-parse", "HEAD")
+
+
+def _write_active_row(env, repos):
+    agents = os.path.join(env.tmp, "agents")
+    os.makedirs(agents, exist_ok=True)
+    names = ", ".join(f"`{name}`" for name in repos)
+    _write(
+        os.path.join(agents, "instructions.md"),
+        "# Working Instructions\n\n"
+        "# Repositories and their roles\n\n"
+        "| Role | Repositories | What an agent does there |\n"
+        "|---|---|---|\n"
+        f"| Active | {names} | Waves, backlog, coordination board |\n"
+        "| Context | `Other_Repo` | Read, `git fetch` |\n"
+        "| Later | `Training` | Nothing until this table promotes it |\n",
+    )
+
+
+def _sync_hook(env):
+    assert os.path.exists(SYNC_HOOK), f"{SYNC_HOOK} does not exist"
+    return env.hook(SYNC_HOOK, {"hook_event_name": "SessionStart", "source": "startup"})
+
+
+@with_env
+def test_sync_fast_forwards_clean_main_behind_origin(env):
+    # AC1
+    _on_main(env)
+    teammate = _teammate_push(env)
+    result = _sync_cli(env, env.repo)
+    assert result.returncode == 0, result.stderr
+    assert env.git("rev-parse", "HEAD") == teammate
+    assert env.git("rev-parse", "origin/main") == teammate
+    short = env.git("rev-parse", "--short", "origin/main")
+    assert result.stdout.strip() == f"{REPO}: fast-forwarded 1 commit to {short}", repr(
+        result.stdout
+    )
+
+
+@with_env
+def test_sync_reports_up_to_date(env):
+    # AC2
+    head = _on_main(env)
+    result = _sync_cli(env, env.repo)
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == f"{REPO}: up to date", repr(result.stdout)
+    assert env.git("rev-parse", "HEAD") == head
+
+
+@with_env
+def test_sync_leaves_other_branch_alone(env):
+    # AC3
+    head = env.git("rev-parse", "HEAD")
+    main_before = env.git("rev-parse", "main")
+    teammate = _teammate_push(env)
+    result = _sync_cli(env, env.repo)
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == f"{REPO}: not synced, checkout is on wave-12-x", repr(
+        result.stdout
+    )
+    assert env.git("branch", "--show-current") == "wave-12-x"
+    assert env.git("rev-parse", "HEAD") == head
+    assert env.git("rev-parse", "main") == main_before
+    assert env.git("rev-parse", "origin/main") == teammate
+
+
+@with_env
+def test_sync_refuses_main_with_unpushed_commits(env):
+    # AC4
+    _on_main(env)
+    _write(os.path.join(env.repo, "local.txt"), "local\n")
+    env.git("add", "local.txt")
+    env.git("commit", "-m", "local")
+    local = env.git("rev-parse", "main")
+    _teammate_push(env)
+    result = _sync_cli(env, env.repo)
+    assert result.returncode == 0, result.stderr
+    assert (
+        result.stdout.strip() == f"{REPO}: not synced, main has 1 commit origin/main lacks"
+    ), repr(result.stdout)
+    assert env.git("rev-parse", "main") == local
+
+
+@with_env
+def test_sync_refuses_dirty_file_in_the_way(env):
+    # AC5
+    head = _on_main(env)
+    readme = os.path.join(env.repo, "README.md")
+    _write(readme, "my local edit\n")
+    _teammate_push(env, files={"README.md": "teammate edit\n"})
+    result = _sync_cli(env, env.repo)
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == (
+        f"{REPO}: not synced, uncommitted changes in the way (README.md)"
+    ), repr(result.stdout)
+    assert env.git("rev-parse", "HEAD") == head
+    assert _read(readme) == "my local edit\n"
+
+
+@with_env
+def test_sync_fast_forwards_past_dirty_file_not_in_the_way(env):
+    # AC6
+    _on_main(env)
+    notes = os.path.join(env.repo, "notes.txt")
+    _write(notes, "notes\n")
+    env.git("add", "notes.txt")
+    env.git("commit", "-m", "notes")
+    env.git("push", "origin", "main")
+    _write(notes, "my local notes\n")
+    teammate = _teammate_push(env, files={"README.md": "teammate edit\n"})
+    result = _sync_cli(env, env.repo)
+    assert result.returncode == 0, result.stderr
+    short = env.git("rev-parse", "--short", "origin/main")
+    assert result.stdout.strip() == f"{REPO}: fast-forwarded 1 commit to {short}", repr(
+        result.stdout
+    )
+    assert env.git("rev-parse", "HEAD") == teammate
+    assert _read(notes) == "my local notes\n"
+    assert _read(os.path.join(env.repo, "README.md")) == "teammate edit\n"
+
+
+@with_env
+def test_sync_reports_unreachable_remote(env):
+    # AC7
+    head = _on_main(env)
+    env.git("remote", "set-url", "origin", os.path.join(env.tmp, "missing.git"))
+    result = _sync_cli(env, env.repo)
+    assert result.returncode == 0, result.stderr
+    line = result.stdout.strip()
+    assert line.startswith(f"{REPO}: not synced, fetch failed (") and line.endswith(")"), (
+        repr(line)
+    )
+    assert env.git("rev-parse", "HEAD") == head
+
+
+@with_env
+def test_sync_cuts_off_hanging_remote(env):
+    # AC8
+    sync_main = _sync_module()
+    _on_main(env)
+    env.git("remote", "set-url", "origin", "ssh://example.invalid/repo.git")
+    # "#" comments out the host and command git appends, so ssh "connects" and then hangs.
+    saved = os.environ.get("GIT_SSH_COMMAND")
+    os.environ["GIT_SSH_COMMAND"] = "sleep 30 #"
+    try:
+        start = time.monotonic()
+        line = sync_main.sync_main_checkout(env.repo, timeout=1)
+        elapsed = time.monotonic() - start
+    finally:
+        if saved is None:
+            del os.environ["GIT_SSH_COMMAND"]
+        else:
+            os.environ["GIT_SSH_COMMAND"] = saved
+    assert elapsed < 5, f"took {elapsed:.1f} s"
+    assert "fetch failed (timed out after 1 s)" in line, repr(line)
+    assert line == f"{REPO}: not synced, fetch failed (timed out after 1 s)", repr(line)
+
+
+@with_env
+def test_sync_fetch_only_moves_origin_not_main(env):
+    # AC9
+    head = _on_main(env)
+    teammate = _teammate_push(env)
+    result = _sync_cli(env, "--fetch-only", env.repo)
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == f"{REPO}: fetched", repr(result.stdout)
+    assert env.git("rev-parse", "origin/main") == teammate
+    assert env.git("rev-parse", "main") == head
+    assert env.git("rev-parse", "HEAD") == head
+
+
+@with_env
+def test_sync_leaves_wave_worktree_untouched(env):
+    # AC10
+    _on_main(env)
+    made = subprocess.run(
+        [WORKTREE_SH, env.repo, "wave-14-y"],
+        env=env.env,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert made.returncode == 0, made.stderr
+    tree = made.stdout.strip().splitlines()[-1]
+    tree_head = env.git("rev-parse", "HEAD", cwd=tree)
+    tree_readme = os.path.join(tree, "README.md")
+    _write(tree_readme, "wave edit\n")
+    teammate = _teammate_push(env)
+    # Called with the worktree's path: the script resolves the main checkout itself.
+    result = _sync_cli(env, tree)
+    assert result.returncode == 0, result.stderr
+    short = env.git("rev-parse", "--short", "origin/main")
+    assert result.stdout.strip() == f"{REPO}: fast-forwarded 1 commit to {short}", repr(
+        result.stdout
+    )
+    assert env.git("rev-parse", "HEAD") == teammate
+    assert env.git("rev-parse", "HEAD", cwd=tree) == tree_head
+    assert env.git("branch", "--show-current", cwd=tree) == "wave-14-y"
+    assert _read(tree_readme) == "wave edit\n"
+
+
+@with_env
+def test_session_start_syncs_active_repos_and_reports(env):
+    # AC11
+    _write_active_row(env, [REPO, "agents"])
+    _on_main(env)
+    teammate = _teammate_push(env)
+    result = _sync_hook(env)
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip(), f"the sync hook printed nothing; stderr: {result.stderr}"
+    context = json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
+    assert context.startswith(SYNC_HEADER), repr(context)
+    assert env.git("rev-parse", "HEAD") == teammate
+    short = env.git("rev-parse", "--short", "origin/main")
+    assert f"{REPO}: fast-forwarded 1 commit to {short}" in context, repr(context)
+
+
+@with_env
+def test_session_start_silent_when_all_up_to_date(env):
+    # AC12
+    _write_active_row(env, [REPO, "agents"])
+    _on_main(env)
+    result = _sync_hook(env)
+    assert result.returncode == 0, result.stderr
+    assert result.stdout == "", repr(result.stdout)
+
+
+@with_env
+def test_statusline_shows_main_behind_until_synced(env):
+    # AC13
+    _write_active_row(env, [REPO, "agents"])
+    _on_main(env)
+    _teammate_push(env, commits=2)
+    env.git("fetch", "origin")
+    assert not os.path.exists(env.board)
+    shown = _statusline(env, {})
+    assert shown == f"main behind: {REPO} 2", repr(shown)
+    synced = _sync_cli(env, env.repo)
+    assert synced.returncode == 0, synced.stderr
+    silent = _statusline(env, {})
+    assert silent == "", repr(silent)
 
 
 def main():
