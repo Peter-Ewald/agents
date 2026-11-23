@@ -25,6 +25,7 @@ import tempfile
 import time
 
 KINDS = ("plan", "hold", "request", "notice", "lock")
+INBOX_KINDS = ("request", "notice")
 LOCK_MAX_AGE = dt.timedelta(hours=2)
 
 
@@ -190,6 +191,10 @@ def entries(repo: str) -> list[Entry]:
     return found
 
 
+def inbox_entries(repo: str) -> list[Entry]:
+    return [e for e in entries(repo) if e.kind in INBOX_KINDS]
+
+
 def all_repos() -> list[str]:
     root = board_root()
     if not os.path.isdir(root):
@@ -213,29 +218,13 @@ def is_stale(entry: Entry, now: dt.datetime | None = None) -> bool:
     if entry.kind == "lock":
         created = _parse_dt(entry.get("created"))
         return created is not None and now - created > LOCK_MAX_AGE
-    if entry.kind in ("hold", "plan", "request"):
+    if entry.kind in ("hold", "plan", "request", "notice"):
         expires = entry.get("expires")
         try:
             return bool(expires) and dt.date.fromisoformat(expires) < _today(now)
         except ValueError:
             return False
     return False
-
-
-def delete_expired_notices(repo: str, now: dt.datetime | None = None) -> list[str]:
-    removed = []
-    for entry in entries(repo):
-        if entry.kind != "notice":
-            continue
-        expires = entry.get("expires")
-        try:
-            expired = bool(expires) and dt.date.fromisoformat(expires) < _today(now)
-        except ValueError:
-            expired = False
-        if expired:
-            os.unlink(entry.path)
-            removed.append(entry.name)
-    return removed
 
 
 def _lock_filename(dataset: str | None) -> str:
@@ -277,7 +266,16 @@ def summary(entry: Entry) -> str:
     if kind == "lock":
         return f"held by {entry.get('wave')} since {entry.get('created')}"
     first = next((ln.strip() for ln in entry.body.splitlines() if ln.strip()), "")
-    return entry.get("summary") or first
+    fallback = entry.get("summary") or first
+    if kind == "request":
+        need = entry.get("need")
+        if not need:
+            return fallback
+        sender = entry.get("from")
+        return f"from {sender}: {need}" if sender else need
+    if kind == "notice":
+        return entry.get("text") or fallback
+    return fallback
 
 
 def format_line(entry: Entry, now: dt.datetime | None = None) -> str:
@@ -525,6 +523,13 @@ def cmd_watch_for_work(args) -> int:
         return 0
 
 
+def cmd_inbox(args) -> int:
+    for repo in [args.repo] if args.repo else all_repos():
+        for entry in inbox_entries(repo):
+            print(format_line(entry))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     sub = parser.add_subparsers(dest="command", required=True)
@@ -542,6 +547,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--kind")
     p.add_argument("--status")
     p.set_defaults(func=cmd_list)
+
+    p = sub.add_parser("inbox", help="requests and notices: the repos' inbox")
+    p.add_argument("--repo")
+    p.set_defaults(func=cmd_inbox)
 
     p = sub.add_parser("file", help="create an entry")
     p.add_argument("kind")

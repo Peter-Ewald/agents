@@ -11,6 +11,8 @@ they are, never through `python3`: only then does the allow rule for that folder
 
 You never edit code, never merge, never answer a wave's question yourself, and never hold a wave's diff:
 each wave returns a short report.
+Requests and notices are each repo's inbox (`instructions.md`, "A repo's inbox"), raised by the agent
+working on that repo; you leave them alone.
 
 ## Setup
 

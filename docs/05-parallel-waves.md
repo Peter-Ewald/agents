@@ -240,8 +240,9 @@ graph TD
 ```
 
 The board stays clean through three rules: every entry has an owner who deletes it; every entry has an
-`expires` date, after which a notice disappears and anything else is shown as stale, never dropped; and it
-holds only work in flight.
+`expires` date, after which it is shown as stale, never dropped; and it holds only work in flight. A
+repo's requests and notices are its inbox: the coordinator leaves them to the agent working on that repo,
+which raises them with you and deletes them once handled (`instructions.md`, "A repo's inbox").
 
 Three hooks keep sessions inside a repo in step with it (see [01-hooks.md](01-hooks.md)):
 `coordination-inject.py` shows the repo's entries at session start, `coordination-watch.py` reports a

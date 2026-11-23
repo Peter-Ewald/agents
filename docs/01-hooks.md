@@ -180,7 +180,7 @@ repo has no board folder.
 
 | Hook | Event | What it does |
 |---|---|---|
-| `coordination-inject.py` | `SessionStart` | Deletes expired notices, then injects the open entries, one line each; expired holds and locks older than 2 hours are marked `STALE`, never deleted. Inside a repo it injects that repo's board. Outside a repo (a session started in `~/Projects`) it injects every repo's board as one `Coordination board for <repo>:` block per repo with open entries, deleting expired notices in each. Silent when nothing is open |
+| `coordination-inject.py` | `SessionStart` | Injects the open entries, one line each, with a request's sender and need and a notice's text; expired entries and locks older than 2 hours are marked `STALE`, never deleted. Inside a repo it injects that repo's board. Outside a repo (a session started in `~/Projects`) it injects every repo's board as one `Coordination board for <repo>:` block per repo with open entries. When a shown entry is a request or notice, a last line points to `instructions.md`'s "A repo's inbox". Silent when nothing is open |
 | `coordination-watch.py` | `PostToolUse` | Stats the board folder (state in `/tmp/claude-coordination-watch-<session_id>.json`) and reports added, changed or removed entries; silent on the first call and when nothing changed. Covers only a session inside a repo, and only after that session's own tool calls; the coordinator, which runs outside every repo and idles between events, uses `board.py watch-for-work` instead (see [05-parallel-waves.md](05-parallel-waves.md)) |
 | `coordination-guard.py` | `PreToolUse` (matcher `Bash`) | Blocks (exit 2) integrating to main (`git push` to main, `az repos pr update --status completed`, an `az rest` PATCH on `.../pullrequests/<id>` whose body completes the PR or cannot be read yet, `gh pr merge`) while an open `blocks: merge` hold names this wave as waiting or `lock.md` is held by another wave, and blocks `eval-dataset push` / `push-all` while the matching `lock-dataset-<D>.md` is held by another wave |
 
@@ -203,18 +203,19 @@ echo '{"tool_name": "Bash", "tool_input": {"command": "git push origin main"}, "
 ## `statusline.py` (not a lifecycle hook, but lives alongside these)
 
 [`../.claude/statusline.py`](../.claude/statusline.py), registered under `statusLine` rather than `hooks`
-in `~/.claude/settings.json`. It prints up to two parts, joined by `  |  `:
+in `~/.claude/settings.json`. It prints up to three parts, joined by `  |  `:
 
 | Part | Source | Shown |
 |---|---|---|
 | Wave and phase, `wave-12 — Implement` | `/tmp/claude-wave-phase-<session_id>`, written by the `wave` skill (see [`02-skills-and-subagents.md`](02-skills-and-subagents.md)) | In the session that runs the wave |
 | Blocked plans, `⚠ 2 blocked: Checkmate/wave-m6, Repo/wave-12` | Plan entries with `status: blocked` on the coordination board, read through `board.py` | In every session, so a question waiting for you is visible wherever you work |
+| Inbox, `inbox: Checkmate 3, Project-Green-HR-MVP 6` | Open `request` and `notice` entries per repo, read through `board.inbox_entries()`; repos with none are left out | In every session, so requests and notices are raised rather than forgotten (see `instructions.md`'s "A repo's inbox") |
 
-It prints nothing when neither applies. Same JSON-on-stdin shape as a hook, which is why it's documented
+It prints nothing when none applies. Same JSON-on-stdin shape as a hook, which is why it's documented
 here, but it isn't triggered by a lifecycle event — Claude Code polls it for display.
 
 ```sh
-echo '{"session_id": "s1"}' | ../.claude/statusline.py   # no wave here, no blocked plan: prints nothing
+echo '{"session_id": "s1"}' | ../.claude/statusline.py   # no wave, no blocked plan, empty inbox: prints nothing
 ```
 
 ## Testing a hook change

@@ -3,8 +3,9 @@
 
 Inside a repo it injects that repo's board. Outside a repo (for example a window opened on a
 folder of repos) it injects every repo's board, one block per repo that has open entries. Silent
-when nothing is open. Deletes expired notices first; expired holds and old locks are shown as
-STALE, never deleted. See `.claude/scripts/board.py` for the board layout.
+when nothing is open. Nothing is deleted: expired notices, expired holds and old locks are
+shown as STALE. When a shown entry is a request or notice, a final line points to the repo's
+inbox rule in instructions.md. See `.claude/scripts/board.py` for the board layout.
 """
 
 import json
@@ -17,20 +18,27 @@ sys.path.insert(
 import board
 
 MAX_CHARS = 10_000
+INBOX_POINTER = (
+    "Requests and notices are the repo's inbox: raise them per "
+    "instructions.md § \"A repo's inbox\" once the session's work concerns that repo."
+)
 
 
-def board_block(repo):
-    """Delete the repo's expired notices and return its open-entries block, or None if none."""
-    board.delete_expired_notices(repo)
-    open_entries = [
+def open_entries(repo):
+    return [
         e
         for e in board.entries(repo)
         if not (e.kind == "hold" and e.get("status") == "satisfied")
     ]
-    if not open_entries:
+
+
+def board_block(repo):
+    """Return the repo's open-entries block, or None if none."""
+    shown = open_entries(repo)
+    if not shown:
         return None
     return f"Coordination board for {repo}:\n" + "\n".join(
-        board.format_line(e) for e in open_entries
+        board.format_line(e) for e in shown
     )
 
 
@@ -43,18 +51,24 @@ def main():
     cwd = event.get("cwd") or os.getcwd()
     repo = board.repo_name(cwd)
     if repo is None:
-        blocks = [board_block(name) for name in board.all_repos()]
+        repos = board.all_repos()
     elif os.path.isdir(board.repo_dir(repo)):
-        blocks = [board_block(repo)]
+        repos = [repo]
     else:
-        blocks = []
+        repos = []
+    blocks = [board_block(name) for name in repos]
     blocks = [block for block in blocks if block is not None]
     if not blocks:
         sys.exit(0)
+    has_inbox = any(
+        e.kind in board.INBOX_KINDS for name in repos for e in open_entries(name)
+    )
 
     text = "\n\n".join(blocks)
     if len(text) > MAX_CHARS:
         text = text[:MAX_CHARS] + "\n... (truncated; run board.py list for the rest)"
+    if has_inbox:
+        text += "\n\n" + INBOX_POINTER
     print(
         json.dumps(
             {

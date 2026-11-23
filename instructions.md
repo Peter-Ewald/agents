@@ -100,6 +100,27 @@ agents belong to its owning team and apply only to an agreed contribution.
 | A contribution to a context repository | The wave plan carries `Role: contribution, agreed with <team>`; for small work outside a wave, the user says so in chat | The change lands through a pull request (`integration: pr`) and follows the owning team's branch, pull request and code conventions. No file of this harness (`backlog.md`, `docs/history/`, `.claude/rules/`) is committed there; the plan and its archive stay in the active repository the work serves |
 | A lasting change of role | Edit the table above | Every later session |
 
+## A repo's inbox
+
+A repo's open `request` and `notice` entries on the coordination board are its **inbox**: work another
+repo asked for, and steps a release asks of this one. The coordinator never acts on them; the agent whose
+session works on the repo does. `board.py` below is `~/Projects/agents/.claude/scripts/board.py`.
+
+- **When.** The first time in a session that the work concerns a repo, before proposing that work, run
+  `board.py inbox --repo <repo>` and raise each entry with the user. The work concerns a repo when the
+  session runs inside it, when the user names it in a session opened on `~/Projects`, or when a plan
+  starts there. Once per repo per session; entries marked `STALE` (past their `expires` date) first.
+- **A request:** offer to turn it into a `backlog.md` entry (backlog curation, see *Backlog
+  maintenance*). Once that entry is committed, delete the request.
+- **A notice:** offer to act on it, now or as part of the planned work, or to close it because it is done
+  or no longer applies, saying why (for example "already pins `>=4.5.0`"). Delete it once acted on or
+  closed. In a context repo, acting means passing it to the owning team: offer a draft message, and close
+  the notice once it is passed on (or do an agreed contribution).
+- **Deferred:** an entry the user defers stays, and is raised again in the next session.
+
+Delete an entry with `board.py rm <repo>/<name>`. A wave that acts on a notice names it in its plan and
+deletes it after the merge.
+
 ---
 
 # Implementation Waves

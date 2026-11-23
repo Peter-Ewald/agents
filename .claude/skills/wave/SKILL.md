@@ -54,6 +54,8 @@ For each affected repo read:
 - its `backlog.md`: Next Up and the Planned entries the change touches
 - its `docs/history/index.md`, opening only the detail files whose titles relate; cite them where they
   shaped the plan
+- its inbox, `board.py inbox --repo <repo>`, raised with the user per `instructions.md`'s "A repo's
+  inbox"; a notice the wave will act on is named in the plan
 
 Work in two repos is one plan per repo, each filed in its own repo's board folder with its own
 `integration`, linked by a `request` and a hold (see [board.md](board.md)). A plan that changes a
@@ -220,9 +222,9 @@ Commit messages follow `instructions.md`'s "Commit messages", passed with `-m`, 
    - `integration: push`: `git push origin HEAD:main`; if `main` moved, rebase again rather than merge.
 7. **After the merge:** remove the wave's `pending:` tags from its eval items (dataset lock, pull, edit,
    push, unlock); satisfy the holds that wait on this wave; release the lock; remove the worktree and
-   delete the branch locally and on origin; delete the plan entry. A server-side rebase gives the
-   commits new ids, so `git branch -d` may refuse: confirm the change is on `origin/main`, then use
-   `git branch -D`.
+   delete the branch locally and on origin; delete the plan entry and the notices the plan names as
+   handled (`board.py rm`). A server-side rebase gives the commits new ids, so `git branch -d` may
+   refuse: confirm the change is on `origin/main`, then use `git branch -D`.
 
 ## 8. Report
 
