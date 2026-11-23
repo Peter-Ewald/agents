@@ -214,8 +214,9 @@ def test_inject(env):
     assert result.returncode == 0, result.stderr
     context = json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
     assert context.startswith(f"Coordination board for {REPO}:")
-    assert "stale-hold" in context and "STALE" in context
-    assert not os.path.exists(os.path.join(env.board, REPO, "old.md"))
+    assert _context_line(context, f"{REPO}/stale-hold").endswith("STALE"), context
+    assert _context_line(context, f"{REPO}/old").endswith("STALE"), context
+    assert os.path.exists(os.path.join(env.board, REPO, "old.md"))
     assert os.path.exists(os.path.join(env.board, REPO, "stale-hold.md"))
 
 
@@ -286,14 +287,7 @@ def test_blocked_plans_listed_and_shown(env):
     ]
 
     def statusline(payload):
-        return subprocess.run(
-            [os.path.join(HERE, "..", "statusline.py")],
-            input=json.dumps(payload),
-            env=env.env,
-            check=False,
-            capture_output=True,
-            text=True,
-        ).stdout.strip()
+        return _statusline(env, payload)
 
     assert statusline({}) == f"⚠ 2 blocked: {REPO}/p1, {REPO}/p3"
     phase_file = f"/tmp/claude-wave-phase-{env.session}"
@@ -314,7 +308,7 @@ OTHER_REPO = "Repo_Y"
 
 @with_env
 def test_inject_outside_repo_shows_all_boards(env):
-    """AC1: outside a repo the hook shows every repo's board and clears expired notices."""
+    """Outside a repo the hook shows every repo's board; expired notices stay, flagged STALE."""
     for repo in (REPO, OTHER_REPO):
         env.board_cli("file", "plan", f"open-{repo}", "--repo", repo, "status=ready")
         env.board_cli(
@@ -327,22 +321,28 @@ def test_inject_outside_repo_shows_all_boards(env):
     for repo in (REPO, OTHER_REPO):
         assert context.count(f"Coordination board for {repo}:") == 1, context
         assert f"open-{repo}" in context, context
-        assert not os.path.exists(os.path.join(env.board, repo, f"old-{repo}.md")), (
-            f"expired notice of {repo} not deleted"
+        assert _context_line(context, f"{repo}/old-{repo}").endswith("STALE"), context
+        assert os.path.exists(os.path.join(env.board, repo, f"old-{repo}.md")), (
+            f"expired notice of {repo} deleted"
         )
 
 
 @with_env
 def test_inject_outside_repo_silent_when_nothing_open(env):
-    """AC2: outside a repo with no open entries anywhere the hook prints nothing."""
+    """Outside a repo with no open entries anywhere the hook prints nothing."""
     empty = env.hook("coordination-inject.py", {"cwd": env.tmp, "session_id": "s"})
     assert empty.returncode == 0 and empty.stdout == "", empty.stdout
-    for repo in (REPO, OTHER_REPO):
-        env.board_cli(
-            "file", "notice", f"old-{repo}", "--repo", repo, "expires=2000-01-01"
-        )
+    env.board_cli("file", "hold", "done", "--repo", REPO, "status=satisfied")
+    satisfied = env.hook("coordination-inject.py", {"cwd": env.tmp, "session_id": "s"})
+    assert satisfied.returncode == 0 and satisfied.stdout == "", satisfied.stdout
+    # An expired notice is still open: it is shown, flagged STALE, and kept.
+    env.board_cli("file", "notice", "old", "--repo", REPO, "expires=2000-01-01")
     expired = env.hook("coordination-inject.py", {"cwd": env.tmp, "session_id": "s"})
-    assert expired.returncode == 0 and expired.stdout == "", expired.stdout
+    assert expired.returncode == 0, expired.stderr
+    assert expired.stdout.strip(), "the expired notice was not shown"
+    context = json.loads(expired.stdout)["hookSpecificOutput"]["additionalContext"]
+    assert _context_line(context, f"{REPO}/old").endswith("STALE"), context
+    assert os.path.exists(os.path.join(env.board, REPO, "old.md"))
     # Precondition that makes the silence meaningful: an open entry outside a repo is shown.
     env.board_cli("file", "plan", "open", "--repo", REPO, "status=ready")
     shown = env.hook("coordination-inject.py", {"cwd": env.tmp, "session_id": "s"})
@@ -697,6 +697,181 @@ def test_keep_dir_allows_return_to_project_dir():
 
 def test_keep_dir_ignores_subagents():
     assert _keep_dir(f"cd {PROJECT}/RepoA", agent_id="abc123").returncode == 0
+
+
+# --------------------------------------------------------------------------- inbox
+
+INBOX_POINTER = (
+    "Requests and notices are the repo's inbox: raise them per instructions.md "
+    '§ "A repo\'s inbox" once the session\'s work concerns that repo.'
+)
+
+
+def _statusline(env, payload):
+    return subprocess.run(
+        [os.path.join(HERE, "..", "statusline.py")],
+        input=json.dumps(payload),
+        env=env.env,
+        check=False,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+
+
+def _inject_context(env, cwd):
+    result = env.hook("coordination-inject.py", {"cwd": cwd, "session_id": "s"})
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip(), "the inject hook printed nothing"
+    return json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
+
+
+def _context_line(context, ref):
+    """The injected line of the entry REPO/NAME; fails when there is none."""
+    lines = [line for line in context.splitlines() if line.startswith(ref + "  ")]
+    assert len(lines) == 1, f"no single line for {ref} in:\n{context}"
+    return lines[0]
+
+
+def _file_inbox_board(env):
+    """AC1's board: Repo_X with 2 notices, 1 request, 1 ready plan, 1 open hold;
+    Repo_Y with 1 notice."""
+    env.board_cli("file", "notice", "notice-a", "--repo", REPO, "text=first notice")
+    env.board_cli("file", "notice", "notice-b", "--repo", REPO, "text=second notice")
+    env.board_cli(
+        "file", "request", "request-a", "--repo", REPO,
+        f"from={OTHER_REPO} / wave-3", "need=a review",
+    )  # fmt: skip
+    env.board_cli("file", "plan", "plan-a", "--repo", REPO, "status=ready")
+    env.board_cli(
+        "file", "hold", "hold-a", "--repo", REPO,
+        f"waiting={REPO} / wave-12", "on=somebody", "blocks=start", "status=open",
+    )  # fmt: skip
+    env.board_cli("file", "notice", "notice-y", "--repo", OTHER_REPO, "text=y notice")
+
+
+@with_env
+def test_statusline_counts_inbox_per_repo(env):
+    # AC1
+    _file_inbox_board(env)
+    shown = _statusline(env, {})
+    assert shown == f"inbox: {REPO} 3, {OTHER_REPO} 1", repr(shown)
+
+
+@with_env
+def test_statusline_orders_phase_blocked_inbox(env):
+    # AC2
+    _file_inbox_board(env)
+    env.board_cli("file", "plan", "p1", "--repo", REPO, "status=blocked")
+    phase_file = f"/tmp/claude-wave-phase-{env.session}"
+    with open(phase_file, "w") as handle:
+        handle.write("wave-12 — Implement\n")
+    try:
+        shown = _statusline(env, {"session_id": env.session})
+    finally:
+        os.unlink(phase_file)
+    assert shown == (
+        f"wave-12 — Implement  |  ⚠ 1 blocked: {REPO}/p1  |  inbox: {REPO} 3, {OTHER_REPO} 1"
+    ), repr(shown)
+
+
+@with_env
+def test_statusline_silent_when_inbox_empty(env):
+    # AC3
+    env.board_cli("file", "plan", "p1", "--repo", REPO, "status=ready")
+    env.board_cli("file", "plan", "p2", "--repo", OTHER_REPO, "status=running")
+    env.board_cli(
+        "file", "hold", "h1", "--repo", REPO,
+        f"waiting={REPO} / wave-12", "on=somebody", "blocks=start", "status=open",
+    )  # fmt: skip
+    silent = _statusline(env, {})
+    assert silent == "", repr(silent)
+    # Precondition that makes the silence meaningful: one notice is counted.
+    env.board_cli("file", "notice", "n1", "--repo", REPO, "text=hello")
+    shown = _statusline(env, {})
+    assert shown == f"inbox: {REPO} 1", repr(shown)
+
+
+@with_env
+def test_closed_notice_leaves_count_and_context(env):
+    # AC4
+    _file_inbox_board(env)
+    assert env.board_cli("rm", f"{REPO}/notice-a").returncode == 0
+    shown = _statusline(env, {})
+    assert shown == f"inbox: {REPO} 2, {OTHER_REPO} 1", repr(shown)
+    context = _inject_context(env, env.repo)
+    assert "notice-a" not in context, context
+    assert f"{REPO}/notice-b" in context, context
+
+
+@with_env
+def test_expired_notice_kept_and_flagged_stale(env):
+    # AC5
+    env.board_cli(
+        "file", "notice", "pin", "--repo", REPO,
+        "expires=2000-01-01", "text=raise the pin",
+    )  # fmt: skip
+    path = os.path.join(env.board, REPO, "pin.md")
+    for cwd in (env.repo, env.tmp):
+        context = _inject_context(env, cwd)
+        assert os.path.exists(path), f"expired notice deleted by the hook (cwd {cwd})"
+        line = _context_line(context, f"{REPO}/pin")
+        assert "raise the pin" in line and line.endswith("STALE"), line
+    shown = _statusline(env, {})
+    assert shown == f"inbox: {REPO} 1", repr(shown)
+
+
+@with_env
+def test_injected_inbox_lines_carry_content(env):
+    # AC6
+    env.board_cli(
+        "file", "request", "batch", "--repo", REPO,
+        f"from={OTHER_REPO} / wave-7", "need=a batch endpoint",
+    )  # fmt: skip
+    env.board_cli("file", "notice", "sdk", "--repo", REPO, "text=SDK 1.2 released")
+    context = _inject_context(env, env.repo)
+    request = _context_line(context, f"{REPO}/batch")
+    assert f"from {OTHER_REPO} / wave-7: a batch endpoint" in request, request
+    notice = _context_line(context, f"{REPO}/sdk")
+    assert "SDK 1.2 released" in notice, notice
+
+
+@with_env
+def test_board_inbox_command_lists_requests_and_notices(env):
+    # AC7
+    _file_inbox_board(env)
+    listed = env.board_cli("list").stdout.splitlines()
+    inbox_lines = [
+        line for line in listed if "kind=request" in line or "kind=notice" in line
+    ]
+    own = env.board_cli("inbox", "--repo", REPO)
+    assert own.returncode == 0, own.stderr
+    assert own.stdout.splitlines() == [
+        line for line in inbox_lines if line.startswith(f"{REPO}/")
+    ], own.stdout
+    assert len(own.stdout.splitlines()) == 3
+    assert "plan-a" not in own.stdout and "hold-a" not in own.stdout
+    every = env.board_cli("inbox")
+    assert every.returncode == 0, every.stderr
+    assert every.stdout.splitlines() == inbox_lines, every.stdout
+    assert f"{OTHER_REPO}/notice-y" in every.stdout
+
+
+@with_env
+def test_inject_pointer_line_only_with_inbox(env):
+    # AC8 (a)
+    _file_inbox_board(env)
+    context = _inject_context(env, env.tmp)
+    assert context.splitlines()[-1] == INBOX_POINTER, context
+    assert context.count(INBOX_POINTER) == 1, context
+
+
+@with_env
+def test_inject_no_pointer_line_without_inbox(env):
+    # AC8 (b)
+    env.board_cli("file", "plan", "p1", "--repo", REPO, "status=ready")
+    context = _inject_context(env, env.tmp)
+    assert f"{REPO}/p1" in context, context
+    assert "inbox" not in context, context
 
 
 def main():
