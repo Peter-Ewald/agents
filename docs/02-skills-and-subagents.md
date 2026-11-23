@@ -203,9 +203,15 @@ repo's `CLAUDE.md` names, the same one a wave's Verification phase uses.
 [`../.claude/skills/sdk-release/SKILL.md`](../.claude/skills/sdk-release/SKILL.md)
 
 Releases `semantic_tracing` or `semantic_evaluation`: checks the changelog has an entry for the target
-version, then runs the bundled [`scripts/release.sh`](../.claude/skills/sdk-release/scripts/release.sh)
-(version bump, `rm -rf dist/`, `uv sync`, `uv build`, `uv publish --index ramtech-pypi`, then stages
-`pyproject.toml` + `CHANGELOG.md` + `uv.lock` together — it does not commit). Bundled as an actual script
+version, then runs the bundled [`scripts/release.sh`](../.claude/skills/sdk-release/scripts/release.sh):
+version bump; relock of every project in the repo that installs the package editable, through
+[`scripts/relock-editable.sh`](../.claude/skills/sdk-release/scripts/relock-editable.sh); `rm -rf dist/`,
+`uv sync`, `uv build`, `uv publish --index ramtech-pypi`; then it stages `pyproject.toml`, `CHANGELOG.md`
+and every relocked `uv.lock` together. It does not commit. The relock finds its projects from the
+git-tracked `uv.lock` files that record the package with an editable source, so a new pod is covered
+without a list to maintain, and it runs before publishing, so a project whose lock cannot take the new
+version stops the release with nothing published. It does not compare the new version with a project's
+declared version range: uv ignores that range for an editable path source. Bundled as an actual script
 rather than prose instructions the model reproduces from memory each time, since the exact command and
 flags (`uv publish --index ramtech-pypi dist/<package>-<version>*`) are exactly the kind of thing that's
 easy to mistype once and shouldn't depend on being remembered correctly. After a successful release it

@@ -1,6 +1,6 @@
 ---
 name: sdk-release
-description: Release a new version of semantic_tracing or semantic_evaluation — bumps the version, verifies the changelog, builds, and publishes to the ramtech-pypi index. Use when the user asks to release/publish/ship a new SDK version.
+description: Release a new version of semantic_tracing or semantic_evaluation — bumps the version, verifies the changelog, relocks the projects that install it editable, builds, and publishes to the ramtech-pypi index. Use when the user asks to release/publish/ship a new SDK version.
 argument-hint: <package> <version>
 disallowed-tools: WebSearch, WebFetch
 ---
@@ -14,11 +14,15 @@ Runs the SDK release sequence for `semantic_tracing` or `semantic_evaluation`. M
    (`x.0.0`) also needs a `### To upgrade` section in that entry, because the upgrade skill reads it.
    If the section is missing, stop in the same way.
 2. Run `${CLAUDE_SKILL_DIR}/scripts/release.sh <package> <version>`. It bumps
-   `sdk/<package>/pyproject.toml`'s version, removes `sdk/<package>/dist/`, runs `uv sync`, `uv build`,
-   the slow `tests/test_packaged_docs.py` (it builds the package again and checks that the wheel carries
-   every docs page), and `uv publish --index ramtech-pypi` (credentials come from `~/.netrc`, already
-   configured — no token handling needed), then stages `pyproject.toml`, `CHANGELOG.md`, and `uv.lock`
-   together. The docs need no step of their own: the package's `hatch_build.py` stages them into
+   `sdk/<package>/pyproject.toml`'s version, then relocks every project in the repo that installs the
+   package editable (`scripts/relock-editable.sh <package>`: each git-tracked `uv.lock` that records the
+   package with an editable source gets `uv lock` and must then record the new version). Then it removes
+   `sdk/<package>/dist/`, runs `uv sync`, `uv build`, the slow `tests/test_packaged_docs.py` (it builds the
+   package again and checks that the wheel carries every docs page), and `uv publish --index
+   ramtech-pypi` (credentials come from `~/.netrc`, already configured; no token handling needed). Last it
+   stages `pyproject.toml`, `CHANGELOG.md` and every relocked `uv.lock` together and lists them. If the
+   relock fails, nothing was published: the error names the project; fix it and run the script again.
+   The docs need no step of their own: the package's `hatch_build.py` stages them into
    `src/<package>/_docs/` during the build, and keeps that copy when `uv build` makes the wheel from the
    sdist, where files outside the project directory no longer exist. If the docs test fails, nothing was
    published; fix the cause rather than skipping the test.

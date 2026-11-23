@@ -19,30 +19,14 @@ only asks for.
 
 | Step | Wave |
 |---|---|
-| 1 | An SDK release relocks every project that installs it editable |
-| 2 | Pilot: parallel waves on a real release |
-
-### An SDK release relocks every project that installs it editable
-
-`sdk-release`'s `scripts/release.sh` bumps `sdk/<package>/pyproject.toml` and stages only that package's
-own `uv.lock`. In `Semantic_Evaluation`, nine other projects install the SDK editable through
-`[tool.uv.sources]` (the repo root, `sdk/`, `scoring_app`, `review_sync_app`, the two reference pods and the
-two workshop scaffolds; `sdk/semantic_evaluation` also installs `semantic_tracing`). Their lock files keep
-the old version, so the next `uv run` in any of them rewrites `uv.lock` and leaves an unrelated diff in
-whatever wave runs there. After 5.0.2, `scoring_app` needed a separate relock commit (PR 147), and six lock
-files still record 5.0.0.
-
-Shape: the release relocks every tracked `uv.lock` whose lock records an editable source for the released
-package, before anything is published, and stages those lock files with the version bump. A relock that
-fails stops the release before publishing. Tested in a temp repo without publishing. The pilot below
-releases the SDK, so this lands first.
+| 1 | Pilot: parallel waves on a real release |
 
 ### Pilot: parallel waves on a real release
 
 The harness can run waves in parallel ([`docs/05-parallel-waves.md`](docs/05-parallel-waves.md)), but no
-batch wave has run yet. The pilot runs a real pair as batch waves and adjusts the harness to what it shows:
-an SDK release in `Semantic_Evaluation` and the pin bump in a pod repo that waits on it with a `merge`
-hold.
+batch wave has yet run across two repos with a hold between them. The pilot runs a real pair as batch
+waves and adjusts the harness to what it shows: an SDK release in `Semantic_Evaluation` and the pin bump
+in a pod repo that waits on it with a `merge` hold.
 
 What to watch, and fix in the harness where it fails:
 
@@ -63,6 +47,22 @@ Done when both waves have merged as batch waves without manual help, or each pla
 harness fix or a backlog entry.
 
 ## Planned
+
+### An SDK release checks the projects' declared version ranges
+
+`sdk-release` relocks every `Semantic_Evaluation` project that installs the released package editable
+(`scripts/relock-editable.sh`), but nothing compares the new version with the range a project declares.
+uv ignores a version range on a dependency that comes from an editable path source: a project requiring
+`pkg-a<1.1` relocks to 1.1.0 without an error (checked with uv 0.7.2; `constraint-dependencies` behaves the
+same). The reference pods and workshop scaffolds declare `semantic-evaluation>=5.0.0,<6`, so a 6.0.0
+release would relock them silently. Their `pyproject.toml` would then exclude the version their lock
+records, which shows only when someone installs the pod from Artifactory instead of the local path.
+
+Shape: before publishing, the relock reads each project's declared range for the package and stops the
+release when the new version falls outside it, naming the project, so the range is raised in the same
+release. A full check needs a PEP 440 range parser, which the standard library lacks (`packaging` through
+`uv run --with packaging`, or a hand-written check of the upper bound only); decide when planning. Needed
+before the next major release of either SDK.
 
 ### Board entries survive their content
 
