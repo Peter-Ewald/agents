@@ -19,7 +19,23 @@ only asks for.
 
 | Step | Wave |
 |---|---|
-| 1 | Pilot: parallel waves on a real release |
+| 1 | An SDK release relocks every project that installs it editable |
+| 2 | Pilot: parallel waves on a real release |
+
+### An SDK release relocks every project that installs it editable
+
+`sdk-release`'s `scripts/release.sh` bumps `sdk/<package>/pyproject.toml` and stages only that package's
+own `uv.lock`. In `Semantic_Evaluation`, nine other projects install the SDK editable through
+`[tool.uv.sources]` (the repo root, `sdk/`, `scoring_app`, `review_sync_app`, the two reference pods and the
+two workshop scaffolds; `sdk/semantic_evaluation` also installs `semantic_tracing`). Their lock files keep
+the old version, so the next `uv run` in any of them rewrites `uv.lock` and leaves an unrelated diff in
+whatever wave runs there. After 5.0.2, `scoring_app` needed a separate relock commit (PR 147), and six lock
+files still record 5.0.0.
+
+Shape: the release relocks every tracked `uv.lock` whose lock records an editable source for the released
+package, before anything is published, and stages those lock files with the version bump. A relock that
+fails stops the release before publishing. Tested in a temp repo without publishing. The pilot below
+releases the SDK, so this lands first.
 
 ### Pilot: parallel waves on a real release
 
