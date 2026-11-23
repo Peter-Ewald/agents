@@ -20,7 +20,8 @@ only asks for.
 | Step | Wave |
 |---|---|
 | 1 | Wave eval runs use `eval-run` item selection |
-| 2 | Pilot: parallel waves on a real release |
+| 2 | An inbox for board requests and notices |
+| 3 | Pilot: parallel waves on a real release |
 
 ### Wave eval runs use `eval-run` item selection
 
@@ -45,6 +46,31 @@ Also correct the same claims in `docs/05-parallel-waves.md` (the eval table unde
 `semeval-maintain` references the wave skill points to agree. Documentation-shaped: no acceptance cases
 beyond reading the changed steps against the 4.3.0 changelog. Lands before the pilot, whose pod wave
 runs exactly these steps.
+
+### An inbox for board requests and notices
+
+The board carries two kinds of entry that nobody is sure to act on. A `request` is another repo's wave
+asking this repo to build something, and it should become a `backlog.md` entry. A `notice` is a plain
+fact with steps for the repos it concerns, such as an SDK release with its pin bump. The coordinator acts
+only on plans and holds, and should stay that way. Today the two kinds reach only the agent's context at
+session start (`coordination-inject.py`), where they show without their text. No rule tells an agent to
+raise them with the user, and the statusline shows only blocked plans. An expired notice is deleted
+without a word, and a notice that was already acted on stays until it expires: for example, Checkmate's
+4.4.1 notice asks for a pin of `>=4.4.1,<5` while Checkmate already pins `>=4.5.0`. Work other repos
+asked for, and upgrade steps from SDK releases, get forgotten.
+
+What the inbox needs, decided together:
+
+- **The planning agent raises them.** Add a rule to `instructions.md`, and a matching step to the `wave`
+  skill's Plan phase. When a session's work concerns a repo, the agent first lists that repo's open
+  requests and notices. It offers to turn each request into a backlog entry and to act on or close each
+  notice. This also applies in a session opened on `~/Projects` that names a repo.
+- **The statusline counts them per repo**, for example `inbox: Checkmate 3, agents 1`, next to the
+  blocked-plans display, and stays silent when nothing is open.
+- **Notices close once handled**, and leave both the count and the injected context. A notice that
+  expires unhandled is reported, not dropped silently.
+
+Out of scope: the coordinator does not take on requests or notices.
 
 ### Pilot: parallel waves on a real release
 
