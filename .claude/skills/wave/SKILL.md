@@ -14,9 +14,9 @@ them:
 | [board.md](board.md) | The coordination board: entry formats, holds, locks, parking and the handover | Plan, Integrate |
 | [report.md](report.md) | The wave report | Report |
 
-`board.py` below means `~/Projects/agents/.claude/scripts/board.py`, and `new-wave-worktree.sh` the script
-next to it. Run both as they are, never through `python3` or `bash`: only then does the allow rule for
-that folder cover them in auto mode.
+`board.py` below means `~/Projects/agents/.claude/scripts/board.py`, and `new-wave-worktree.sh` and
+`sync_main.py` the scripts next to it. Run them as they are, never through `python3` or `bash`: only then
+does the allow rule for that folder cover them in auto mode.
 
 At every phase transition, overwrite `/tmp/claude-wave-phase-${CLAUDE_SESSION_ID}` with one line:
 `<wave name> — <phase name>`. Use this exact path, not the scratchpad directory: the statusline script
@@ -48,7 +48,10 @@ or Later Considerations is promoted to Next Up first, rewritten to fit that tier
 
 Name the repos the change needs, with their roles from `instructions.md`'s "Repositories and their
 roles". The session starts in `~/Projects`, outside every repo, so nothing repo-specific is loaded yet.
-For each affected repo read:
+First bring each affected repo's main checkout up to date: `sync_main.py <repo path>` for an active repo
+fast-forwards `main` to `origin/main`, `sync_main.py --fetch-only <repo path>` for a context repo only
+fetches. A line starting `not synced` says why `main` stayed behind; read `origin/main` (`git show
+origin/main:<file>`) where it matters. Then, for each affected repo, read:
 
 - its `CLAUDE.md` and untracked `.claude/rules/*.md` (conventions, test commands, `Integration: push`)
 - its `backlog.md`: Next Up and the Planned entries the change touches
@@ -225,7 +228,9 @@ Commit messages follow `instructions.md`'s "Commit messages", passed with `-m`, 
    push, unlock); satisfy the holds that wait on this wave; release the lock; remove the worktree and
    delete the branch locally and on origin; delete the plan entry and the notices the plan names as
    handled (`board.py rm`). A server-side rebase gives the commits new ids, so `git branch -d` may
-   refuse: confirm the change is on `origin/main`, then use `git branch -D`.
+   refuse: confirm the change is on `origin/main`, then use `git branch -D`. Last, run
+   `sync_main.py <repo path>` so the main checkout carries the change; a `not synced` line goes into
+   the report.
 
 ## 8. Report
 

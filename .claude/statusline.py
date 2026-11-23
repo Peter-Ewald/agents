@@ -1,10 +1,11 @@
 #!/usr/bin/python3
-"""Statusline script. Prints up to three parts, joined by "  |  ":
+"""Statusline script. Prints up to four parts, joined by "  |  ":
 
 - the current wave and phase, if the `wave` skill has written one for this session;
 - the blocked plans on the coordination board, in every session, so a wave waiting for the
   user's answer stays visible wherever the user is working: ``⚠ 2 blocked: Repo/wave-m6, …``;
-- the open requests and notices (the inbox) per repo, in every session: ``inbox: agents 2, Checkmate 1``.
+- the open requests and notices (the inbox) per repo, in every session: ``inbox: agents 2, Checkmate 1``;
+- the active repos whose local `main` is behind `origin/main`, in every session: ``main behind: agents 3, Checkmate 1``.
 
 Prints nothing when none applies.
 
@@ -62,12 +63,28 @@ def inbox():
     return "inbox: " + ", ".join(f"{repo} {n}" for repo, n in counts)
 
 
+def main_behind():
+    try:
+        import sync_main
+
+        counts = [
+            (os.path.basename(path), sync_main.commits_behind_origin(path))
+            for path in sync_main.active_repo_paths()
+        ]
+    except Exception:  # noqa: BLE001 — a broken repo must never break the statusline
+        return ""
+    counts = [(name, n) for name, n in counts if n]
+    if not counts:
+        return ""
+    return "main behind: " + ", ".join(f"{name} {n}" for name, n in counts)
+
+
 def main():
     try:
         event = json.load(sys.stdin)
     except (json.JSONDecodeError, ValueError):
         event = {}
-    parts = [part for part in (phase(event), blocked(), inbox()) if part]
+    parts = [part for part in (phase(event), blocked(), inbox(), main_behind()) if part]
     if parts:
         print("  |  ".join(parts))
 

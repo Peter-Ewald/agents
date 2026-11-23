@@ -3,7 +3,9 @@
 Scripts referenced by absolute path from `~/.claude/settings.json` hook configuration: reinjecting
 CLAUDE.md/instructions.md on compaction or a direct edit, ruff autofixing, changed-lines linting,
 web-search rate limiting, new-dependency flagging, changelog-before-commit ordering, keeping the main
-session's working directory in place, Excalidraw binding validation, and the three coordination-board
+session's working directory in place, syncing the active repos' main checkouts with `origin/main` at
+session start (`sync-main-at-start.py`, backed by [`../scripts/sync_main.py`](../scripts/sync_main.py)),
+Excalidraw binding validation, and the three coordination-board
 hooks (`coordination-inject.py`, `coordination-watch.py`, `coordination-guard.py`, backed by
 [`../scripts/board.py`](../scripts/board.py)). `coordination-guard.py`,
 `require-changelog-before-commit.py` and `keep-working-directory.py` share the command parsing in

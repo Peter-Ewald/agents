@@ -167,6 +167,35 @@ echo '{"tool_name": "Write", "tool_input": {"file_path": "/path/to/diagram.excal
   | ../.claude/hooks/validate_excalidraw_bindings.py; echo "exit: $?"
 ```
 
+## `sync-main-at-start.py`
+
+**Event:** `SessionStart` (matcher: `startup|resume|clear`; not `compact`, which starts no new work).
+
+Waves land from their own worktrees, so a repo's main checkout (the folder `~/Projects/<repo>` itself)
+does not move when `origin/main` does, and a session that reads `backlog.md` there would read an old
+copy. This hook brings the main checkout of every active repo (the "Active" row of the roles table in
+`instructions.md`) forward to `origin/main` before the session reads anything. It fetches all of them in
+parallel and waits for the fetches, each capped at 8 s. It reports what moved or stayed behind as
+context for the agent, one line per repo under `Main checkouts synced at session start:`, and is silent
+when every repo was already up to date. Context repos are left out.
+
+The work is done by [`../.claude/scripts/sync_main.py`](../.claude/scripts/sync_main.py), a stdlib
+module and command line (`sync_main.py [--fetch-only] PATH...`) that the `wave` skill also runs before
+a plan and after a merge. For each path it resolves the repo's main checkout (a worktree path works
+too), runs `git fetch origin`, and runs `git merge --ff-only origin/main` only when the checkout is on
+`main` and `main` has no commits `origin/main` lacks. It never stashes, resets, rebases or switches
+branch, and it never touches a wave's worktree. Each path gives one line, `<repo>: <outcome>`: `up to
+date`, `fast-forwarded 2 commits to <sha>`, `fetched` (with `--fetch-only`), or `not synced, <reason>`,
+for example `checkout is on wave-12-x`, `main has 1 commit origin/main lacks`, `uncommitted changes in
+the way (README.md)` or `fetch failed (timed out after 8 s)`. Its exit code is 0 whatever the outcome.
+
+```sh
+~/Projects/agents/.claude/scripts/sync_main.py ~/Projects/agents ~/Projects/Checkmate
+echo '{"hook_event_name": "SessionStart"}' | CLAUDE_PROJECTS_DIR=/tmp/none ../.claude/hooks/sync-main-at-start.py
+```
+
+`CLAUDE_PROJECTS_DIR` overrides `~/Projects`, the folder that holds the repos and `agents/instructions.md`.
+
 ## Coordination board hooks
 
 Parallel waves (one session or subagent per branch `wave-<NN>-<slug>`, each in its own git worktree)
@@ -193,7 +222,8 @@ the untracked files listed in the main checkout's `.worktreeinclude` (such as `.
 checkout's untracked `.claude/rules/*.md` (a personal `integration.md`, whether or not listed), and ensures
 `docs/history/index.md merge=union` is in the repo's `info/attributes`. It prints the worktree path as its
 last line. `python3 .claude/scripts/test_coordination.py` smoke-tests the board, the three hooks and the
-script in temp dirs, along with `require-changelog-before-commit.py` and `keep-working-directory.py`.
+script in temp dirs, along with `require-changelog-before-commit.py`, `keep-working-directory.py`,
+`sync_main.py`, `sync-main-at-start.py` and the statusline.
 
 ```sh
 echo '{"tool_name": "Bash", "tool_input": {"command": "git push origin main"}, "cwd": "/path/to/repo"}' \
@@ -203,19 +233,20 @@ echo '{"tool_name": "Bash", "tool_input": {"command": "git push origin main"}, "
 ## `statusline.py` (not a lifecycle hook, but lives alongside these)
 
 [`../.claude/statusline.py`](../.claude/statusline.py), registered under `statusLine` rather than `hooks`
-in `~/.claude/settings.json`. It prints up to three parts, joined by `  |  `:
+in `~/.claude/settings.json`. It prints up to four parts, joined by `  |  `:
 
 | Part | Source | Shown |
 |---|---|---|
 | Wave and phase, `wave-12 — Implement` | `/tmp/claude-wave-phase-<session_id>`, written by the `wave` skill (see [`02-skills-and-subagents.md`](02-skills-and-subagents.md)) | In the session that runs the wave |
 | Blocked plans, `⚠ 2 blocked: Checkmate/wave-m6, Repo/wave-12` | Plan entries with `status: blocked` on the coordination board, read through `board.py` | In every session, so a question waiting for you is visible wherever you work |
 | Inbox, `inbox: Checkmate 3, Project-Green-HR-MVP 6` | Open `request` and `notice` entries per repo, read through `board.inbox_entries()`; repos with none are left out | In every session, so requests and notices are raised rather than forgotten (see `instructions.md`'s "A repo's inbox") |
+| Main behind, `main behind: agents 3, Checkmate 1` | Per active repo, the commits on `origin/main` that the main checkout's `main` lacks, read through `sync_main.commits_behind_origin()` from local refs (no fetch); repos at 0 are left out | In every session, so a checkout that could not be fast-forwarded stays visible until it catches up |
 
 It prints nothing when none applies. Same JSON-on-stdin shape as a hook, which is why it's documented
 here, but it isn't triggered by a lifecycle event — Claude Code polls it for display.
 
 ```sh
-echo '{"session_id": "s1"}' | ../.claude/statusline.py   # no wave, no blocked plan, empty inbox: prints nothing
+echo '{"session_id": "s1"}' | ../.claude/statusline.py   # no wave, no blocked plan, empty inbox, no lag: prints nothing
 ```
 
 ## Testing a hook change
