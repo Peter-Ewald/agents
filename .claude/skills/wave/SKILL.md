@@ -161,7 +161,8 @@ like any other. Yourself:
 - Remove the wave's section from `backlog.md` and correct any other entry whose shape this wave changed.
 - Fix the specific documentation claims this wave made false.
 - Archive the session plan to `docs/history/` per `CLAUDE.md`'s "Plan history archiving".
-- `CHANGELOG.md`, only in the wave that releases the package; others file a `notice`. The entry goes
+- `CHANGELOG.md`, only in the wave that releases the package; others file a `notice` for it, which the
+  releasing wave's plan names and deletes after its merge. The entry goes
   under `## [Unreleased]`, and no file names the new version yet (no pin, lock file, backlog or history
   line): the version is the next one after whatever is on `main` at Integrate, which no plan can know.
 

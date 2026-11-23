@@ -182,7 +182,7 @@ a rebase conflict and judge a re-verification. The coordinator never merges. The
 |---|---|
 | `docs/history/index.md` | `merge=union` in `.git/info/attributes`, written by the worktree script, keeps both lines |
 | `backlog.md` | Resolved during the rebase; the Next Up renumbering is mechanical |
-| `CHANGELOG.md` | Only the releasing wave writes it, under `## [Unreleased]`; it sets the version at Integrate, under the lock. Others leave a `notice` |
+| `CHANGELOG.md` | Only the releasing wave writes it, under `## [Unreleased]`; it sets the version at Integrate, under the lock. Others leave a `notice`, which the releasing wave deletes after its merge |
 
 ## A wave that waits for another
 

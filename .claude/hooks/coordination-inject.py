@@ -32,9 +32,8 @@ def open_entries(repo):
     ]
 
 
-def board_block(repo):
+def board_block(repo, shown):
     """Return the repo's open-entries block, or None if none."""
-    shown = open_entries(repo)
     if not shown:
         return None
     return f"Coordination board for {repo}:\n" + "\n".join(
@@ -56,12 +55,13 @@ def main():
         repos = [repo]
     else:
         repos = []
-    blocks = [board_block(name) for name in repos]
+    shown = {name: open_entries(name) for name in repos}
+    blocks = [board_block(name, shown[name]) for name in repos]
     blocks = [block for block in blocks if block is not None]
     if not blocks:
         sys.exit(0)
     has_inbox = any(
-        e.kind in board.INBOX_KINDS for name in repos for e in open_entries(name)
+        e.kind in board.INBOX_KINDS for entries in shown.values() for e in entries
     )
 
     text = "\n\n".join(blocks)

@@ -45,3 +45,22 @@ Verification runs follow the SDK's current defaults.
 
 Done when both waves have merged as batch waves without manual help, or each place that needed help is a
 harness fix or a backlog entry.
+
+## Planned
+
+### Board entries survive their content
+
+Two parsing problems in `.claude/scripts/board.py` hide or cut what the board shows, and matter most for
+the inbox, whose content lives in front matter fields (`need=` of a request, `text=` of a notice):
+
+- `_parse_value` treats ` #` inside a value as the start of a comment, so `need=fix #42 soon` is stored
+  as `need: fix`. The rest is lost at filing time, without a warning. A value written as `[a, b]` is
+  parsed as a list.
+- One unreadable entry (no closing `---`, or not UTF-8) makes `entries()` raise. Then the statusline's
+  inbox and blocked parts go blank for every repo, the `coordination-inject.py` hook injects nothing
+  outside a repo, and `board.py inbox` and `list` stop at the broken repo (a non-UTF-8 file gives a
+  traceback, since `main()` catches only `BoardError` and `OSError`). `_watch_scan` already skips a bad
+  entry and reports it; the other readers should do the same, so one broken file never hides the rest.
+
+Shape: quote values on filing (or stop stripping comments from values the script itself wrote), and give
+`entries()` callers a way to skip and name unreadable entries. Tests in `test_coordination.py`.

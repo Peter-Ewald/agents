@@ -73,10 +73,10 @@ See [`05-parallel-waves.md`](05-parallel-waves.md).
 ## Inbox
 
 A repo's open `request` and `notice` entries on the coordination board: work another repo asked for,
-and steps a release asks of this repo. The agent whose session works on the repo raises them with you and
-deletes each once it is a backlog entry, acted on or closed; the coordinator does not act on them.
-`board.py inbox` lists them and the statusline counts them. Not a message queue: nothing is delivered
-or acknowledged. See `instructions.md`'s "A repo's inbox".
+and facts with steps for this repo, such as a release to adopt or a change the next release's changelog
+must cover. The agent whose session works on the repo raises them with you and deletes each once it
+is a backlog entry, acted on or closed; the coordinator does not act on them. `board.py inbox` lists them
+and the statusline counts them. Not a message queue: nothing is delivered or acknowledged. See `instructions.md`'s "A repo's inbox".
 
 ## Plan entry
 

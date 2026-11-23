@@ -103,8 +103,9 @@ agents belong to its owning team and apply only to an agreed contribution.
 ## A repo's inbox
 
 A repo's open `request` and `notice` entries on the coordination board are its **inbox**: work another
-repo asked for, and steps a release asks of this one. The coordinator never acts on them; the agent whose
-session works on the repo does. `board.py` below is `~/Projects/agents/.claude/scripts/board.py`.
+repo asked for, and facts with steps for this one, such as a release to adopt or a change the next
+release's changelog must cover. The coordinator never acts on them; the agent whose session works on the
+repo does. `board.py` below is `~/Projects/agents/.claude/scripts/board.py`.
 
 - **When.** The first time in a session that the work concerns a repo, before proposing that work, run
   `board.py inbox --repo <repo>` and raise each entry with the user. The work concerns a repo when the

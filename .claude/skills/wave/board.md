@@ -11,12 +11,12 @@ it only through `board.py`; `board.py list` shows the open entries.
 | `plan` | The repo the wave runs in | An approved plan: the wave's brief, its status and, while `waiting`, its handover | The wave agent, after the merge |
 | `hold` | The waiting repo | The waiting wave may not start, or may not merge, until the condition is true | The waiting wave, once it has used the result |
 | `request` | The repo asked to build something | One wave asks another repo for a feature | The agent working on that repo, once it is a `backlog.md` entry and, if needed, a hold |
-| `notice` | Each repo it concerns | A fact with the steps it asks of the repo, for example "SDK 0.9.0 released" | The agent working on that repo, once it acted on it or closed it as done or not applicable |
+| `notice` | Each repo it concerns | A fact with the steps it asks of the repo, for example "SDK 0.9.0 released" or a change the next release's `CHANGELOG.md` must cover | The agent working on that repo, once it acted on it or closed it as done or not applicable |
 | `lock` (`lock.md`) | The repo being integrated | One wave is integrating; others wait before pushing to `main` or completing a PR | The holding wave, after the merge |
 | `lock` (`lock-dataset-<name>.md`) | The repo that owns the dev dataset | One wave is pulling, merging and pushing that dataset | The holding wave, right after its push |
 
-Every entry has an `expires` date. An expired entry and a lock older than two hours are shown as
-`STALE`, never dropped silently.
+Every entry but a lock has an `expires` date. An expired entry and a lock older than two hours are shown
+as `STALE`, never dropped silently.
 The board holds only work in flight: history belongs in `docs/history/`, pending work in `backlog.md`.
 
 ## Wave identity
@@ -132,7 +132,7 @@ repo must have acted, after which it is shown as `STALE`:
 board.py file request from-green-w12-batch-api --repo Semantic_Evaluation \
   "from=Project-Green-HR-MVP / wave-12" "need=a batch upload endpoint" expires=2026-11-30
 board.py file notice sdk-0.9.0-released --repo Project-Green-HR-MVP \
-  "text=semantic-evaluation 0.9.0 is on Artifactory" expires=2026-11-23
+  "text=semantic-evaluation 0.9.0 is on Artifactory; raise the pin to >=0.9.0,<1" expires=2026-12-07
 ```
 
 List and close them:
