@@ -19,7 +19,32 @@ only asks for.
 
 | Step | Wave |
 |---|---|
-| 1 | Pilot: parallel waves on a real release |
+| 1 | Wave eval runs use `eval-run` item selection |
+| 2 | Pilot: parallel waves on a real release |
+
+### Wave eval runs use `eval-run` item selection
+
+Requested by `Semantic_Evaluation` Wave 63, which shipped item selection in `semantic_evaluation` 4.3.0.
+Since that release a run leaves out every item tagged `pending:` by default, and `eval-run` takes the
+selection as flags (`--items`, `--include-pending`, comma lists) that replace the run file's values.
+The `wave` skill still describes the selection the way it had to be done before: the Verification step
+(`.claude/skills/wave/SKILL.md`, § 5) lists every *other* wave's `pending:` tag in `exclude_tags:`, which
+the default now does on its own, and which needs the wave agent to find out which other waves are in
+flight. Worse, under the new default that regression run silently leaves out this wave's own new items,
+which are still tagged pending until the merge.
+
+The change, in the `wave` skill's steps for an LLM agent:
+
+| Phase | Today | After |
+|---|---|---|
+| Implement (§ 3) | A run file that selects the wave's items by id (`items:`), three repeats | `eval-run --items <ids> --repeats 3` on the existing run file; no wave-specific run file |
+| Verification (§ 5) | Full regression with every other wave's `pending:` tag in `exclude_tags:` | Full regression with `--include-pending pending:<repo>/<wave key>`; other waves' pending items stay out by default |
+
+Also correct the same claims in `docs/05-parallel-waves.md` (the eval table under parallel waves) and
+`docs/02-skills-and-subagents.md` (the "In a wave" paragraph), and check that `test-author` and the
+`semeval-maintain` references the wave skill points to agree. Documentation-shaped: no acceptance cases
+beyond reading the changed steps against the 4.3.0 changelog. Lands before the pilot, whose pod wave
+runs exactly these steps.
 
 ### Pilot: parallel waves on a real release
 
@@ -40,9 +65,8 @@ What to watch, and fix in the harness where it fails:
   later wave has to rebase over the files every wave touches (`CHANGELOG.md`, `backlog.md`, the package
   version).
 
-Starts once `Semantic_Evaluation` Waves 64 (`push` merges what changed in Langfuse since the pull) and 63
-(a run selects items by id and leaves out other waves' `pending:` tags) have landed: the harness docs and
-skills already assume both.
+Starts once the wave skill's eval runs use `eval-run` item selection (step 1), so the pod wave's
+Implement and Verification runs follow the SDK's current defaults.
 
 Done when both waves have merged as batch waves without manual help, or each place that needed help is a
 harness fix or a backlog entry.
