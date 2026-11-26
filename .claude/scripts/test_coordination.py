@@ -1184,6 +1184,174 @@ def test_statusline_shows_main_behind_until_synced(env):
     assert silent == "", repr(silent)
 
 
+# --------------------------------------------------------------------------- entry content
+
+NO_CLOSING = b"---\nkind: notice\ntext: never closed\n"
+NOT_UTF8 = b"\xff\xfe"
+
+
+def _file_broken_board(env, content):
+    """Repo_X: a good notice and broken.md holding CONTENT; Repo_Y: a good notice."""
+    for repo, name in ((REPO, "good-x"), (OTHER_REPO, "good-y")):
+        filed = env.board_cli(
+            "file", "notice", name, "--repo", repo, f"text=good notice {repo}"
+        )
+        assert filed.returncode == 0, filed.stderr
+    with open(os.path.join(env.board, REPO, "broken.md"), "wb") as handle:
+        handle.write(content)
+
+
+def _unreadable_line(stderr, ref):
+    """The stderr line naming REF as unreadable; fails when there is none."""
+    prefix = f"board.py: unreadable {ref}: "
+    lines = [line for line in stderr.splitlines() if line.startswith(prefix)]
+    assert len(lines) == 1, f"no single unreadable line for {ref} in:\n{stderr}"
+    return lines[0][len(prefix) :]
+
+
+def _assert_lists_around_broken(env, reason_part):
+    for command in (("inbox",), ("list",)):
+        result = env.board_cli(*command)
+        for ref in (f"{REPO}/good-x", f"{OTHER_REPO}/good-y"):
+            assert ref in result.stdout, (command, result.stdout, result.stderr)
+        assert "Traceback" not in result.stderr, (command, result.stderr)
+        reason = _unreadable_line(result.stderr, f"{REPO}/broken")
+        assert reason_part in reason, (command, reason)
+        assert result.returncode == 1, (command, result.returncode)
+
+
+@with_env
+def test_hash_in_value_survives_filing(env):
+    # AC1
+    filed = env.board_cli("file", "request", "r", "--repo", REPO, "need=fix #42 soon")
+    assert filed.returncode == 0, filed.stderr
+    shown = env.board_cli("show", f"{REPO}/r").stdout
+    assert "need: fix #42 soon" in shown.splitlines(), shown
+    listed = env.board_cli("inbox", "--repo", REPO).stdout.splitlines()
+    assert len(listed) == 1 and listed[0].endswith("fix #42 soon"), listed
+
+
+@with_env
+def test_brackets_in_value_stay_text(env):
+    # AC2
+    env.board_cli("file", "notice", "n", "--repo", REPO, "text=[a, b]")
+    env.board_cli(
+        "file", "plan", "p", "--repo", REPO, "status=ready", "holds=[a, b]"
+    )  # fmt: skip
+    listed = env.board_cli("inbox", "--repo", REPO).stdout.splitlines()
+    assert len(listed) == 1 and "[a, b]" in listed[0], listed
+    shown = env.board_cli("show", f"{REPO}/p").stdout
+    assert "holds: [a, b]" in shown.splitlines(), shown
+
+
+@with_env
+def test_line_break_in_value_refused(env):
+    # AC3
+    message = "value of text contains a line break"
+    filed = env.board_cli("file", "notice", "n", "--repo", REPO, "text=one\ntwo")
+    assert filed.returncode == 1, (filed.returncode, filed.stderr)
+    assert message in filed.stderr and "--body-file" in filed.stderr, filed.stderr
+    assert not os.path.exists(os.path.join(env.board, REPO, "n.md"))
+    good = env.board_cli("file", "notice", "good", "--repo", REPO, "text=fine")
+    assert good.returncode == 0, good.stderr
+    path = os.path.join(env.board, REPO, "good.md")
+    with open(path, "rb") as handle:
+        before = handle.read()
+    changed = env.board_cli("set", f"{REPO}/good", "text=one\ntwo")
+    assert changed.returncode == 1, (changed.returncode, changed.stderr)
+    assert message in changed.stderr and "--body-file" in changed.stderr, changed.stderr
+    with open(path, "rb") as handle:
+        assert handle.read() == before
+
+
+@with_env
+def test_list_and_inbox_name_entry_without_closing_marker(env):
+    # AC4
+    _file_broken_board(env, NO_CLOSING)
+    _assert_lists_around_broken(env, "closing '---'")
+
+
+@with_env
+def test_list_and_inbox_name_non_utf8_entry(env):
+    # AC5
+    _file_broken_board(env, NOT_UTF8)
+    _assert_lists_around_broken(env, "not UTF-8")
+
+
+@with_env
+def test_statusline_keeps_parts_and_names_unreadable_entry(env):
+    # AC6
+    _file_broken_board(env, NO_CLOSING)
+    env.board_cli("file", "plan", "pb", "--repo", OTHER_REPO, "status=blocked")
+    parts = _statusline(env, {}).split("  |  ")
+    assert f"⚠ 1 blocked: {OTHER_REPO}/pb" in parts, parts
+    assert f"inbox: {REPO} 1, {OTHER_REPO} 1" in parts, parts
+    assert f"⚠ board unreadable: {REPO}/broken" in parts, parts
+
+
+@with_env
+def test_inject_names_unreadable_entry_in_its_repo_block(env):
+    # AC7
+    _file_broken_board(env, NO_CLOSING)
+    context = _inject_context(env, env.tmp)
+    blocks = {
+        block.splitlines()[0]: block.splitlines()[1:] for block in context.split("\n\n")
+    }
+    own = blocks.get(f"Coordination board for {REPO}:")
+    other = blocks.get(f"Coordination board for {OTHER_REPO}:")
+    assert own is not None and other is not None, context
+    assert any(line.startswith(f"{REPO}/good-x  ") for line in own), context
+    assert any(line.startswith(f"{OTHER_REPO}/good-y  ") for line in other), context
+    prefix = f"unreadable: {REPO}/broken: "
+    named = [line for line in own if line.startswith(prefix)]
+    assert len(named) == 1 and len(named[0]) > len(prefix), context
+    assert not any(line.startswith("unreadable:") for line in other), context
+
+
+@with_env
+def test_guard_blocks_on_unreadable_entry_in_own_repo_only(env):
+    # AC8
+    _file_broken_board(env, NO_CLOSING)
+    blocked = env.guard("git push origin HEAD:main")
+    assert blocked.returncode == 2, (blocked.returncode, blocked.stderr)
+    assert "broken.md" in blocked.stderr, blocked.stderr
+    assert f"board.py rm {REPO}/broken" in blocked.stderr, blocked.stderr
+    os.replace(
+        os.path.join(env.board, REPO, "broken.md"),
+        os.path.join(env.board, OTHER_REPO, "broken.md"),
+    )
+    assert os.path.isdir(os.path.join(env.board, REPO))
+    allowed = env.guard("git push origin HEAD:main")
+    assert allowed.returncode == 0, (allowed.returncode, allowed.stderr)
+
+
+@with_env
+def test_watch_for_work_reports_non_utf8_entry_once(env):
+    # AC9
+    _watch_baseline(env)
+    with open(os.path.join(env.board, REPO, "broken.md"), "wb") as handle:
+        handle.write(NOT_UTF8)
+    lines = _watch_once(env)
+    assert len(lines) == 1, lines
+    assert lines[0].startswith("board: unreadable ") and "broken" in lines[0], lines
+    assert _watch_once(env) == []
+
+
+@with_env
+def test_watch_hook_reports_non_utf8_entry(env):
+    # AC10
+    os.makedirs(os.path.join(env.board, REPO))
+    first = env.watch()
+    assert first.returncode == 0 and first.stdout == "", first.stderr
+    with open(os.path.join(env.board, REPO, "broken.md"), "wb") as handle:
+        handle.write(NOT_UTF8)
+    changed = env.watch()
+    assert changed.returncode == 0, changed.stderr
+    assert changed.stdout.strip(), f"the watch hook printed nothing: {changed.stderr}"
+    context = json.loads(changed.stdout)["hookSpecificOutput"]["additionalContext"]
+    assert f"added: {REPO}/broken" in context.splitlines(), context
+
+
 def main():
     tests = [(n, f) for n, f in sorted(globals().items()) if n.startswith("test_")]
     failed = 0
