@@ -21,9 +21,8 @@ only asks for.
 |---|---|
 | 1 | Pilot: parallel waves on a real release |
 | 2 | Every skill has a stated home and reaches the sessions that need it |
-| 3 | Board entries survive their content |
 
-Steps 2 and 3 depend on nothing and may land before step 1.
+Step 2 depends on nothing and may land before step 1.
 
 ### Pilot: parallel waves on a real release
 
@@ -103,24 +102,6 @@ Wanted before the next onboarding from a fresh session, at the latest the closin
 Done when a fresh session on `~/Projects` invokes `onboard-newcomer` on "onboard <name>", and
 `docs/03-cross-repo-distribution.md` answers "where does this skill go" and "how does it stay current" for
 each kind.
-
-### Board entries survive their content
-
-Two parsing problems in `.claude/scripts/board.py` hide or cut what the board shows, and matter most for
-the inbox, whose content lives in front matter fields (`need=` of a request, `text=` of a notice):
-
-- `_parse_value` treats ` #` inside a value as the start of a comment, so `need=fix #42 soon` is stored
-  as `need: fix`. The rest is lost at filing time, without a warning. A value written as `[a, b]` is
-  parsed as a list.
-- One unreadable entry (no closing `---`, or not UTF-8) makes `entries()` raise. Then the statusline's
-  inbox and blocked parts go blank for every repo, the `coordination-inject.py` hook injects nothing
-  outside a repo, and `board.py inbox` and `list` stop at the broken repo (a non-UTF-8 file gives a
-  traceback, since `main()` catches only `BoardError` and `OSError`). `_watch_scan` already skips a bad
-  entry and reports it; the other readers should do the same, so one broken file never hides the rest.
-
-Shape: values are stored and read verbatim, a line break in a value is refused at filing, and the board
-is read entry by entry so a broken entry is skipped and named; the guard blocks integration while its
-repo's board has a broken entry. Tests in `test_coordination.py`. Planned as a batch wave.
 
 ## Planned
 

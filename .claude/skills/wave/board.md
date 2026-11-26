@@ -6,6 +6,13 @@ directory (`board.py repo` prints it), so every worktree of a repo maps to the s
 one small file with a front matter header, so parallel sessions never edit the same file. Read and write
 it only through `board.py`; `board.py list` shows the open entries.
 
+A field value (`board.py file ... key=value`, `board.py set ... key=value`) is one line of text, stored
+and read back exactly as written: `#` and brackets have no special meaning. `board.py` refuses a value
+with a line break; longer text goes in the body (`--body-file`, `--append-body-file`). An entry file that
+cannot be read (no closing `---`, not UTF-8) is skipped and named by every reader: `board.py list` and
+`inbox` print `board.py: unreadable <repo>/<name>: <reason>` on stderr and exit 1, and the guard hook
+blocks integration in that repo until the file is repaired or removed (`board.py rm <repo>/<name>`).
+
 | Kind | Filed under | Meaning | Removed by |
 |---|---|---|---|
 | `plan` | The repo the wave runs in | An approved plan: the wave's brief, its status and, while `waiting`, its handover | The wave agent, after the merge |
