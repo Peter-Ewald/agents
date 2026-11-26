@@ -36,6 +36,11 @@ Every tool call re-sends the whole conversation, so cost grows with context size
   agent, which run on Sonnet by default (`CLAUDE_CODE_SUBAGENT_MODEL`); pass `model: "haiku"` for a plain
   lookup. Forks inherit this conversation and its model, so use one only when the full context is the
   point.
+- **A deck's visual check runs in `deck-visual-check`**, never in the main session, whatever the `pptx`
+  skill's Visual QA says: slide images cost about 1,500 tokens each and are re-sent with every later
+  call. A deck built by a script gets every slide on the first round and only the changed slides after a
+  fix; a deck the user maintains that the agent edited gets only the changed slides; a deck the user
+  edits in PowerPoint gets no check. The main session acts on the defect list the agent returns.
 - **One session per piece of work.** After a wave commits, or when switching topic, suggest `/clear`:
   `backlog.md`, `docs/history/`, and the code carry everything across sessions.
 
