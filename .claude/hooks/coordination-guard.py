@@ -8,7 +8,9 @@ Blocks (exit 2) when
   `blocks: merge` hold names this repo+wave as waiting, or the repo integration lock `lock.md` is
   held by a different wave;
 - the command pushes a dataset (`eval-dataset push --name D` / `push-all`) and the matching
-  `lock-dataset-<D>.md` is held by a different wave.
+  `lock-dataset-<D>.md` is held by a different wave;
+- either kind of command runs while an entry in the repo's own board folder cannot be read (the
+  message names it and says to repair or remove it), since holds and locks may hide in it.
 No board folder: allow silently. Internal errors are printed to stderr and never block.
 """
 
@@ -127,6 +129,14 @@ def check(kind, dataset, directory):
         return None
     key = board.wave_key(directory)
     folder = f"{board.repo_dir(repo)}/"
+    broken = board.read_board(repo)[1]
+    if broken:
+        name = broken[0].ref.split("/", 1)[-1]
+        return (
+            f"coordination: unreadable board entry {folder}{name}.md "
+            f"({broken[0].reason}); repair or remove it (board.py rm {repo}/{name}) "
+            "before integrating."
+        )
     if kind == "merge":
         holds = board.open_merge_holds_for(repo, key)
         if holds:

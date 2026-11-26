@@ -7,7 +7,9 @@ Layout: ``<root>/<repo>/<name>.md``. The root is ``~/.claude/coordination/`` unl
 the directory that contains the git common dir, so every worktree of a repo shares one folder.
 
 Each entry has a front matter block (``key: value`` lines between two ``---`` lines) and an
-optional markdown body. Values are scalar strings or flow lists ``[a, b]``.
+optional markdown body. Values are plain one-line text, taken verbatim: nothing in a value is
+interpreted (no comments, no lists) and a value cannot hold a line break; longer text goes in
+the body.
 
 Stdlib only; usable as a CLI (``board.py --help``) and as a module by the coordination hooks.
 """
@@ -23,6 +25,7 @@ import subprocess
 import sys
 import tempfile
 import time
+from typing import NamedTuple
 
 KINDS = ("plan", "hold", "request", "notice", "lock")
 INBOX_KINDS = ("request", "notice")
@@ -112,22 +115,16 @@ class Entry:
         return str(self.fields.get("kind", ""))
 
     def get(self, key: str, default: str = "") -> str:
-        value = self.fields.get(key, default)
-        return ", ".join(value) if isinstance(value, list) else str(value)
+        return str(self.fields.get(key, default))
 
 
-def _parse_value(raw: str):
-    raw = re.sub(r"\s+#.*$", "", raw.strip()).strip()
-    if raw.startswith("[") and raw.endswith("]"):
-        inner = raw[1:-1].strip()
-        return [item.strip() for item in inner.split(",") if item.strip()]
-    return raw
+class Unreadable(NamedTuple):
+    ref: str  # "<repo>/<name>"
+    reason: str
 
 
-def _format_value(value) -> str:
-    if isinstance(value, list):
-        return "[" + ", ".join(str(v) for v in value) + "]"
-    return str(value)
+def _parse_value(raw: str) -> str:
+    return raw.strip()
 
 
 def parse_text(text: str) -> tuple[dict, str]:
@@ -147,7 +144,7 @@ def parse_text(text: str) -> tuple[dict, str]:
 
 
 def render(fields: dict, body: str) -> str:
-    head = "".join(f"{k}: {_format_value(v)}\n" for k, v in fields.items())
+    head = "".join(f"{k}: {v}\n" for k, v in fields.items())
     return "---\n" + head + "---" + (body if body else "\n")
 
 
@@ -169,26 +166,56 @@ def repo_dir(repo: str) -> str:
     return os.path.join(board_root(), repo)
 
 
-def read_entry(repo: str, name: str) -> Entry:
+class _EntryUnreadable(BoardError):
+    """An entry exists but cannot be read; the message is the bare reason."""
+
+
+def _load_entry(repo: str, name: str) -> Entry:
+    """Read and parse an entry; a failure carries the bare reason, without the entry's name."""
     path = os.path.join(repo_dir(repo), name + ".md")
     try:
-        with open(path) as handle:
+        with open(path, encoding="utf-8") as handle:
             text = handle.read()
     except FileNotFoundError:
         raise BoardError(f"no such entry: {repo}/{name}") from None
-    fields, body = parse_text(text)
+    except UnicodeDecodeError as exc:
+        raise _EntryUnreadable(f"not UTF-8 ({exc})") from None
+    try:
+        fields, body = parse_text(text)
+    except BoardError as exc:
+        raise _EntryUnreadable(str(exc)) from None
     return Entry(repo, name, path, fields, body)
 
 
-def entries(repo: str) -> list[Entry]:
+def read_entry(repo: str, name: str) -> Entry:
+    try:
+        return _load_entry(repo, name)
+    except _EntryUnreadable as exc:
+        raise BoardError(f"{repo}/{name}: {exc}") from None
+
+
+def read_board(repo: str) -> tuple[list[Entry], list[Unreadable]]:
+    """Every entry of REPO, skipping (and naming) the ones that cannot be read."""
     folder = repo_dir(repo)
     if not os.path.isdir(folder):
-        return []
-    found = []
+        return [], []
+    found: list[Entry] = []
+    broken: list[Unreadable] = []
     for filename in sorted(os.listdir(folder)):
-        if filename.endswith(".md") and not filename.startswith("."):
-            found.append(read_entry(repo, filename[:-3]))
-    return found
+        if not filename.endswith(".md") or filename.startswith("."):
+            continue
+        name = filename[:-3]
+        try:
+            found.append(_load_entry(repo, name))
+        except _EntryUnreadable as exc:
+            broken.append(Unreadable(f"{repo}/{name}", str(exc)))
+        except BoardError:
+            continue  # vanished between listing and reading
+    return found, broken
+
+
+def entries(repo: str) -> list[Entry]:
+    return read_board(repo)[0]
 
 
 def inbox_entries(repo: str) -> list[Entry]:
@@ -310,7 +337,13 @@ def _parse_pairs(pairs: list[str]) -> dict:
         key, sep, value = pair.partition("=")
         if not sep:
             raise BoardError(f"expected key=value, got {pair!r}")
-        fields[key.strip()] = _parse_value(value)
+        key = key.strip()
+        value = _parse_value(value)
+        if "\n" in value or "\r" in value:
+            raise BoardError(
+                f"value of {key} contains a line break; put longer text in the body (--body-file)"
+            )
+        fields[key] = value
     return fields
 
 
@@ -339,14 +372,23 @@ def cmd_wave(args) -> int:
 
 
 def cmd_list(args) -> int:
+    broken: list[Unreadable] = []
     for repo in [args.repo] if args.repo else all_repos():
-        for entry in entries(repo):
+        found, bad = read_board(repo)
+        broken += bad
+        for entry in found:
             if args.kind and entry.kind != args.kind:
                 continue
             if args.status and entry.get("status") != args.status:
                 continue
             print(format_line(entry))
-    return 0
+    return _report_unreadable(broken)
+
+
+def _report_unreadable(broken: list[Unreadable]) -> int:
+    for item in broken:
+        print(f"board.py: unreadable {item.ref}: {item.reason}", file=sys.stderr)
+    return 1 if broken else 0
 
 
 def cmd_file(args) -> int:
@@ -472,7 +514,7 @@ def _watch_scan(state: dict | None) -> tuple[dict, list[str]]:
                 continue
             try:
                 entry = read_entry(repo, name)
-            except (BoardError, UnicodeDecodeError) as exc:
+            except BoardError as exc:
                 new[key] = {"mtime_ns": mtime_ns, "kind": "", "status": ""}
                 events.append(f"board: unreadable {key}: {exc}")
                 continue
@@ -524,10 +566,14 @@ def cmd_watch_for_work(args) -> int:
 
 
 def cmd_inbox(args) -> int:
+    broken: list[Unreadable] = []
     for repo in [args.repo] if args.repo else all_repos():
-        for entry in inbox_entries(repo):
-            print(format_line(entry))
-    return 0
+        found, bad = read_board(repo)
+        broken += bad
+        for entry in found:
+            if entry.kind in INBOX_KINDS:
+                print(format_line(entry))
+    return _report_unreadable(broken)
 
 
 def build_parser() -> argparse.ArgumentParser:

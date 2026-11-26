@@ -1,10 +1,12 @@
 #!/usr/bin/python3
-"""Statusline script. Prints up to four parts, joined by "  |  ":
+"""Statusline script. Prints up to five parts, joined by "  |  ":
 
 - the current wave and phase, if the `wave` skill has written one for this session;
 - the blocked plans on the coordination board, in every session, so a wave waiting for the
   user's answer stays visible wherever the user is working: ``⚠ 2 blocked: Repo/wave-m6, …``;
 - the open requests and notices (the inbox) per repo, in every session: ``inbox: agents 2, Checkmate 1``;
+- the board entries that cannot be read, in every session, the first one named and the rest
+  counted: ``⚠ board unreadable: agents/wave-m6, +2``. The other board parts skip such an entry;
 - the active repos whose local `main` is behind `origin/main`, in every session: ``main behind: agents 3, Checkmate 1``.
 
 Prints nothing when none applies.
@@ -63,6 +65,21 @@ def inbox():
     return "inbox: " + ", ".join(f"{repo} {n}" for repo, n in counts)
 
 
+def unreadable():
+    try:
+        import board
+
+        refs = [
+            item.ref for repo in board.all_repos() for item in board.read_board(repo)[1]
+        ]
+    except Exception:  # noqa: BLE001 — a broken entry must never break the statusline
+        return ""
+    if not refs:
+        return ""
+    more = f", +{len(refs) - 1}" if len(refs) > 1 else ""
+    return f"⚠ board unreadable: {refs[0]}{more}"
+
+
 def main_behind():
     try:
         import sync_main
@@ -84,7 +101,11 @@ def main():
         event = json.load(sys.stdin)
     except (json.JSONDecodeError, ValueError):
         event = {}
-    parts = [part for part in (phase(event), blocked(), inbox(), main_behind()) if part]
+    parts = [
+        part
+        for part in (phase(event), blocked(), inbox(), unreadable(), main_behind())
+        if part
+    ]
     if parts:
         print("  |  ".join(parts))
 

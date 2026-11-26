@@ -5,7 +5,9 @@ Inside a repo it injects that repo's board. Outside a repo (for example a window
 folder of repos) it injects every repo's board, one block per repo that has open entries. Silent
 when nothing is open. Nothing is deleted: expired notices, expired holds and old locks are
 shown as STALE. When a shown entry is a request or notice, a final line points to the repo's
-inbox rule in instructions.md. See `.claude/scripts/board.py` for the board layout.
+inbox rule in instructions.md. An entry that cannot be read is named in its repo's block as
+`unreadable: <repo>/<name>: <reason>`, so one broken file never hides the rest. See
+`.claude/scripts/board.py` for the board layout.
 """
 
 import json
@@ -25,20 +27,21 @@ INBOX_POINTER = (
 
 
 def open_entries(repo):
-    return [
-        e
-        for e in board.entries(repo)
-        if not (e.kind == "hold" and e.get("status") == "satisfied")
+    """Return (open entries, unreadable entries) of the repo."""
+    entries, broken = board.read_board(repo)
+    shown = [
+        e for e in entries if not (e.kind == "hold" and e.get("status") == "satisfied")
     ]
+    return shown, broken
 
 
-def board_block(repo, shown):
-    """Return the repo's open-entries block, or None if none."""
-    if not shown:
+def board_block(repo, shown, broken):
+    """Return the repo's block of open and unreadable entries, or None if none."""
+    if not shown and not broken:
         return None
-    return f"Coordination board for {repo}:\n" + "\n".join(
-        board.format_line(e) for e in shown
-    )
+    lines = [board.format_line(e) for e in shown]
+    lines += [f"unreadable: {u.ref}: {u.reason}" for u in broken]
+    return f"Coordination board for {repo}:\n" + "\n".join(lines)
 
 
 def main():
@@ -56,12 +59,12 @@ def main():
     else:
         repos = []
     shown = {name: open_entries(name) for name in repos}
-    blocks = [board_block(name, shown[name]) for name in repos]
+    blocks = [board_block(name, *shown[name]) for name in repos]
     blocks = [block for block in blocks if block is not None]
     if not blocks:
         sys.exit(0)
     has_inbox = any(
-        e.kind in board.INBOX_KINDS for entries in shown.values() for e in entries
+        e.kind in board.INBOX_KINDS for entries, _ in shown.values() for e in entries
     )
 
     text = "\n\n".join(blocks)
