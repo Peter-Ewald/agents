@@ -9,3 +9,4 @@ Subagent definitions shared across repos via the `~/.claude/agents` symlink to t
 | `test-author` | Turns a plan's acceptance cases into failing tests and eval items in the Specify phase |
 | `wave-runner` | Runs one batch wave in the background for the coordinator |
 | `doc-sweep` | A documentation sweep: a sweep wave's work, or an ad hoc request |
+| `deck-visual-check` | A deck's visual check: renders the slides through PowerPoint and returns only a defect list |

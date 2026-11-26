@@ -158,6 +158,29 @@ history is synthesized into a present-tense explanation, never narrated as a tim
 See `instructions.md`'s "Documentation update: choosing the mechanism" for how this fits alongside a small
 inline edit and a wave's own documentation upkeep.
 
+## `deck-visual-check` (subagent)
+
+[`../.claude/agents/deck-visual-check.md`](../.claude/agents/deck-visual-check.md)
+
+Checks how a PowerPoint deck's slides look, so their images never enter the main session: a slide image
+costs about 1,500 tokens and would be re-sent with every later tool call. The brief names the deck, the
+slides (`all` or a list) and, optionally, fonts outside the safe list. The agent renders those slides with
+[`../.claude/scripts/render_deck.py`](../.claude/scripts/render_deck.py), reads each image, and returns
+only a list of layout defects per slide (overflow, overlap, tight margins, misalignment, broken words,
+blank characters, leftover placeholders); content errors are a separate fact check. Runs on Sonnet at
+medium effort with `Read` and `Bash` only.
+
+`render_deck.py DECK OUT_DIR [--dpi N] [--slides SPEC]` renders through PowerPoint itself, because only
+PowerPoint shows how its own fonts render: it copies the deck into PowerPoint's sandbox folder (so no
+file-access dialog appears), exports the copy as PDF via AppleScript, and turns the requested pages into
+`slide-NN.png` with `pdftoppm`. The original deck is never opened, so a deck someone has open is safe.
+
+The `pptx` skill's own instructions ask for this check in the session that builds the deck. That skill
+is synced from claude.ai, which overwrites a local edit, so the override lives in `CLAUDE.md`'s *Token
+economy*: the check always runs in `deck-visual-check`. A deck built by a script gets every slide on the
+first round and only the changed slides after a fix; a deck the user maintains that the agent edited gets
+only the changed slides; a deck the user edits in PowerPoint gets no check.
+
 ## `design-conventions` (skill)
 
 [`../.claude/skills/design-conventions/SKILL.md`](../.claude/skills/design-conventions/SKILL.md)

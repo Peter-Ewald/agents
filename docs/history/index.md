@@ -4,6 +4,7 @@ One line per concluded plan, newest first. See `instructions.md`, *Plan history*
 
 | Date | Topic | Outcome | Detail |
 |---|---|---|---|
+| 2026-11-26 | A deck's visual check runs in a subagent | completed | [2026-11-26-deck-visual-check-subagent.md](2026-11-26-deck-visual-check-subagent.md) |
 | 2026-11-26 | Board entries survive their content | completed | [2026-11-26-board-entries-survive-content.md](2026-11-26-board-entries-survive-content.md) |
 | 2026-11-23 | An SDK release relocks every project that installs it editable | completed | [2026-11-23-sdk-release-relocks-editable-installers.md](2026-11-23-sdk-release-relocks-editable-installers.md) |
 | 2026-11-23 | Local main follows origin/main | completed | [2026-11-23-local-main-follows-origin.md](2026-11-23-local-main-follows-origin.md) |

@@ -95,8 +95,8 @@ edit it is checking. The board, holds, parking and the coordinator are described
   standalone.
 - [`02-skills-and-subagents.md`](02-skills-and-subagents.md): `wave`, `coordinate`,
   `implementer-contract`, the implementer tiers, `test-author`, `wave-runner`, `doc-sweep`,
-  `doc-conventions`, `design-conventions`, `ruff-cleanup`, `sdk-release`, `langfuse-upgrade`, the
-  `semeval-*` skills.
+  `deck-visual-check`, `doc-conventions`, `design-conventions`, `ruff-cleanup`, `sdk-release`,
+  `langfuse-upgrade`, the `semeval-*` skills.
 - [`03-cross-repo-distribution.md`](03-cross-repo-distribution.md): how the symlink setup works, and the
   gotchas it ran into.
 - [`04-working-with-the-harness.md`](04-working-with-the-harness.md): the experience of using this day

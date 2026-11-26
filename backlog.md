@@ -21,10 +21,9 @@ only asks for.
 |---|---|
 | 1 | Pilot: parallel waves on a real release |
 | 2 | Every skill has a stated home and reaches the sessions that need it |
-| 3 | A deck's visual check runs in a subagent |
-| 4 | An SDK release checks the projects' declared version ranges |
+| 3 | An SDK release checks the projects' declared version ranges |
 
-Steps 2 to 4 depend on nothing and may land before step 1.
+Steps 2 and 3 depend on nothing and may land before step 1.
 
 ### Pilot: parallel waves on a real release
 
@@ -105,22 +104,9 @@ Done when a fresh session on `~/Projects` invokes `onboard-newcomer` on "onboard
 `docs/03-cross-repo-distribution.md` answers "where does this skill go" and "how does it stay current" for
 each kind.
 
-### A deck's visual check runs in a subagent
+| 3 | An SDK release checks the projects' declared version ranges |
 
-The synced `pptx` skill requires a visual check ("Visual QA (required)"): render every slide to an image
-and look at it. Run in the main session, the images stay in its context and go out again with every later
-tool call. One image at 110 dpi costs about 1,500 tokens. For a 21 slide deck (Checkmate, *the stream's
-deck for the platform owner* wave (09)), the first pass cost about 35k tokens and the re-renders after
-fixes another 15k to 20k. That was a large part of why the session ran out of context. The check found
-real defects, but only in the layout: overlapping text, a box past the slide edge, experiment ids wrapping
-mid-word, a non-breaking hyphen (U+2011) that PowerPoint's Calibri renders blank, and centred titles.
-
-Shape: a `deck-visual-check` agent on Sonnet renders the slides through PowerPoint (a `render_deck.py`
-script: PDF export via AppleScript, then `pdftoppm`, since LibreOffice is not installed) and returns only
-a defect list per slide. A bullet in `CLAUDE.md` (*Token economy*) overrides the `pptx` skill's
-in-session check, which cannot be edited because it is synced from claude.ai: a deck built by a script
-gets every slide checked, then only changed slides; a deck the user maintains that the agent edited gets
-only the changed slides; a deck the user edits in PowerPoint gets no check. Planned as a batch wave.
+Steps 2 and 3 depend on nothing and may land before step 1.
 
 ### An SDK release checks the projects' declared version ranges
 
