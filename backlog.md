@@ -21,9 +21,8 @@ only asks for.
 |---|---|
 | 1 | Pilot: parallel waves on a real release |
 | 2 | Every skill has a stated home and reaches the sessions that need it |
-| 3 | An SDK release checks the projects' declared version ranges |
 
-Steps 2 and 3 depend on nothing and may land before step 1.
+Step 2 depends on nothing and may land before step 1.
 
 ### Pilot: parallel waves on a real release
 
@@ -103,23 +102,3 @@ Wanted before the next onboarding from a fresh session, at the latest the closin
 Done when a fresh session on `~/Projects` invokes `onboard-newcomer` on "onboard <name>", and
 `docs/03-cross-repo-distribution.md` answers "where does this skill go" and "how does it stay current" for
 each kind.
-
-| 3 | An SDK release checks the projects' declared version ranges |
-
-Steps 2 and 3 depend on nothing and may land before step 1.
-
-### An SDK release checks the projects' declared version ranges
-
-`sdk-release` relocks every `Semantic_Evaluation` project that installs the released package editable
-(`scripts/relock-editable.sh`), but nothing compares the new version with the range a project declares.
-uv ignores a version range on a dependency that comes from an editable path source: a project requiring
-`pkg-a<1.1` relocks to 1.1.0 without an error (checked with uv 0.7.2; `constraint-dependencies` behaves the
-same). The reference pods and workshop scaffolds declare `semantic-evaluation>=5.0.0,<6`, so a 6.0.0
-release would relock them silently. Their `pyproject.toml` would then exclude the version their lock
-records, which shows only when someone installs the pod from Artifactory instead of the local path.
-
-Shape: before any relock, a stdlib range check (`>=`, `>`, `<`, `<=`, `==`, `!=` on plain versions; any
-other form stops as uncheckable) reads each editable installer's declared range, including optional
-dependencies and dependency groups, and stops the release naming every project whose range excludes the
-new version, so the range is raised in the same release. Needed before the next major release of either
-SDK. Planned as a batch wave.

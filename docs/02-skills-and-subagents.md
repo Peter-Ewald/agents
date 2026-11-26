@@ -233,8 +233,13 @@ version bump; relock of every project in the repo that installs the package edit
 and every relocked `uv.lock` together. It does not commit. The relock finds its projects from the
 git-tracked `uv.lock` files that record the package with an editable source, so a new pod is covered
 without a list to maintain, and it runs before publishing, so a project whose lock cannot take the new
-version stops the release with nothing published. It does not compare the new version with a project's
-declared version range: uv ignores that range for an editable path source. Bundled as an actual script
+version stops the release with nothing published. Before any relock,
+[`scripts/declared_range.py`](../.claude/skills/sdk-release/scripts/declared_range.py) checks each of
+those projects' declared ranges on the package, including optional dependencies and dependency groups,
+against the new version: uv ignores a range on an editable path source, so without the check a pod
+declaring `<6` would relock to 6.0.0 silently. A range that excludes the version, or one the stdlib parser
+cannot read (`~=`, wildcards, pre-releases), stops the release with no lock changed and names every such
+project, so its range is raised in the same release. Bundled as an actual script
 rather than prose instructions the model reproduces from memory each time, since the exact command and
 flags (`uv publish --index ramtech-pypi dist/<package>-<version>*`) are exactly the kind of thing that's
 easy to mistype once and shouldn't depend on being remembered correctly. After a successful release it

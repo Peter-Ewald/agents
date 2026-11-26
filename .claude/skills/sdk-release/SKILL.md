@@ -16,7 +16,14 @@ Runs the SDK release sequence for `semantic_tracing` or `semantic_evaluation`. M
 2. Run `${CLAUDE_SKILL_DIR}/scripts/release.sh <package> <version>`. It bumps
    `sdk/<package>/pyproject.toml`'s version, then relocks every project in the repo that installs the
    package editable (`scripts/relock-editable.sh <package>`: each git-tracked `uv.lock` that records the
-   package with an editable source gets `uv lock` and must then record the new version). Then it removes
+   package with an editable source gets `uv lock` and must then record the new version). Before any
+   relock it checks that each of these projects' declared ranges on the package (dependencies, optional
+   dependencies, dependency groups) admits the new version, with `scripts/declared_range.py`, because uv
+   ignores a range on an editable path source and would relock past it. A range that excludes the
+   version, or one the check cannot read (`~=`, a wildcard, a pre-release), stops the release with no
+   lock changed, naming every such project. Raise that project's range, apply the release's
+   `### To upgrade` steps to it for a major release, and run the script again. A pre-release version
+   (`6.0.0rc1`) always stops the check. Then it removes
    `sdk/<package>/dist/`, runs `uv sync`, `uv build`, the slow `tests/test_packaged_docs.py` (it builds the
    package again and checks that the wheel carries every docs page), and `uv publish --index
    ramtech-pypi` (credentials come from `~/.netrc`, already configured; no token handling needed). Last it
