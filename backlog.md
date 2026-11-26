@@ -22,8 +22,9 @@ only asks for.
 | 1 | Pilot: parallel waves on a real release |
 | 2 | Every skill has a stated home and reaches the sessions that need it |
 | 3 | A deck's visual check runs in a subagent |
+| 4 | An SDK release checks the projects' declared version ranges |
 
-Steps 2 and 3 depend on nothing and may land before step 1.
+Steps 2 to 4 depend on nothing and may land before step 1.
 
 ### Pilot: parallel waves on a real release
 
@@ -121,8 +122,6 @@ in-session check, which cannot be edited because it is synced from claude.ai: a 
 gets every slide checked, then only changed slides; a deck the user maintains that the agent edited gets
 only the changed slides; a deck the user edits in PowerPoint gets no check. Planned as a batch wave.
 
-## Planned
-
 ### An SDK release checks the projects' declared version ranges
 
 `sdk-release` relocks every `Semantic_Evaluation` project that installs the released package editable
@@ -133,8 +132,8 @@ same). The reference pods and workshop scaffolds declare `semantic-evaluation>=5
 release would relock them silently. Their `pyproject.toml` would then exclude the version their lock
 records, which shows only when someone installs the pod from Artifactory instead of the local path.
 
-Shape: before publishing, the relock reads each project's declared range for the package and stops the
-release when the new version falls outside it, naming the project, so the range is raised in the same
-release. A full check needs a PEP 440 range parser, which the standard library lacks (`packaging` through
-`uv run --with packaging`, or a hand-written check of the upper bound only); decide when planning. Needed
-before the next major release of either SDK.
+Shape: before any relock, a stdlib range check (`>=`, `>`, `<`, `<=`, `==`, `!=` on plain versions; any
+other form stops as uncheckable) reads each editable installer's declared range, including optional
+dependencies and dependency groups, and stops the release naming every project whose range excludes the
+new version, so the range is raised in the same release. Needed before the next major release of either
+SDK. Planned as a batch wave.
